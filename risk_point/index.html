@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบแจ้งจุดเสี่ยงอุบัติเหตุ (หน้าหลัก)</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        html, body { 
+            height: 100%; margin: 0; padding: 0; 
+            font-family: 'Sarabun', sans-serif; 
+            overflow: hidden; background-color: #f8f9fa;
+        }
+
+        .navbar { z-index: 1030; height: 60px; }
+
+        #map { 
+            position: absolute; top: 60px; left: 0;
+            width: 100%; height: calc(100% - 60px); z-index: 1;
+        }
+
+        /* Province Selector Control */
+        .province-box {
+            position: absolute; top: 130px; /* เลื่อนลงมาไม่ให้บัง Map Control */
+            right: 10px; z-index: 10;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            width: 220px; transition: all 0.3s ease; overflow: hidden;
+            max-height: 500px;
+        }
+        .province-box.collapsed { max-height: 45px; width: 160px; }
+        
+        .province-header {
+            padding: 10px 15px; cursor: pointer;
+            background-color: #198754; color: white;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        
+        .province-content { padding: 10px; }
+
+        .btn-province {
+            background: white; border: 1px solid #ddd; font-size: 0.85rem;
+            width: 100%; text-align: left; margin-bottom: 5px; padding: 8px;
+            border-radius: 4px; transition: all 0.2s;
+        }
+        .btn-province:hover, .btn-province.active {
+            background: #e9ecef; border-color: #198754; color: #198754; font-weight: bold;
+        }
+
+        /* Filter Box */
+        .filter-box {
+            position: absolute; top: 75px; left: 10px; z-index: 10; 
+            background: rgba(255, 255, 255, 0.95); 
+            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+            width: 280px; transition: all 0.3s ease; overflow: hidden;
+            max-height: 90vh;
+        }
+        .filter-box.collapsed { max-height: 50px; width: 200px; }
+        .filter-header {
+            padding: 12px 15px; cursor: pointer;
+            background-color: rgba(255,255,255,0.1); border-bottom: 1px solid #eee;
+        }
+        .filter-content { padding: 15px; overflow-y: auto; max-height: calc(90vh - 60px); }
+        .filter-box.collapsed .filter-header { border-bottom: none; }
+
+        /* Image Gallery in InfoWindow */
+        .gallery-container {
+            display: flex; gap: 5px; overflow-x: auto; padding-bottom: 5px;
+            margin-top: 8px; scrollbar-width: thin;
+        }
+        .gallery-img { 
+            height: 80px; width: auto; border-radius: 4px; border: 1px solid #ddd; cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .gallery-img:hover { transform: scale(1.05); }
+
+        #layer-loading {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            z-index: 20; background: rgba(0,0,0,0.8); color: white;
+            padding: 8px 20px; border-radius: 20px; font-size: 0.85rem; display: none;
+        }
+
+        .upload-area {
+            background-color: #f1f3f5; border: 1px dashed #ced4da;
+            padding: 10px; border-radius: 6px; margin-top: 10px;
+        }
+
+        /* Instruction Toast */
+        .instruction-toast {
+            position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9); padding: 8px 16px; border-radius: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); font-size: 0.9rem; color: #333;
+            z-index: 5; pointer-events: none;
+            display: flex; align-items: center; gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark bg-success fixed-top shadow-sm px-2">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <a class="navbar-brand d-flex align-items-center gap-2 me-0" href="index.html">
+                <i class="fas fa-shield-alt fa-lg"></i>
+                <span class="d-none d-sm-inline fw-bold">SafeRoad อีสาน</span>
+            </a>
+            <div class="d-flex gap-2">
+                <a href="index.html" class="btn btn-light text-success btn-sm fw-bold"><i class="fas fa-map-marked-alt"></i> แผนที่</a>
+                <a href="form.html" class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-exclamation-circle"></i> 
+                    <span class="d-inline">แจ้งเหตุ</span>
+                </a>
+                <a href="admin.html" class="btn btn-outline-light btn-sm"><i class="fas fa-user-cog"></i> <span class="d-none d-md-inline">ผู้ดูแล</span></a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Province Selection -->
+    <div class="province-box" id="provinceBox">
+        <div class="province-header" onclick="toggleProvinceBox()">
+            <span class="small fw-bold"><i class="fas fa-map"></i> เลือกพื้นที่</span>
+            <i class="fas fa-chevron-up text-white" id="provinceIcon"></i>
+        </div>
+        <div class="province-content">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="boundaryToggle" checked onchange="updateLayerStyle()">
+                <label class="form-check-label small" for="boundaryToggle">แสดงขอบเขตอำเภอ</label>
+            </div>
+            <hr class="my-2">
+            <button class="btn btn-province active" onclick="changeProvince('45', {lat: 16.0538, lng: 103.6520})">
+                จ.ร้อยเอ็ด
+            </button>
+            <button class="btn btn-province" onclick="changeProvince('40', {lat: 16.4322, lng: 102.8236})">
+                จ.ขอนแก่น
+            </button>
+            <button class="btn btn-province" onclick="changeProvince('44', {lat: 16.1868, lng: 103.2995})">
+                จ.มหาสารคาม
+            </button>
+            <button class="btn btn-province" onclick="changeProvince('46', {lat: 16.4338, lng: 103.5064})">
+                จ.กาฬสินธุ์
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Box -->
+    <div class="filter-box" id="filterBox">
+        <div class="filter-header d-flex justify-content-between align-items-center" onclick="toggleFilterBox()">
+            <h6 class="mb-0 text-success fw-bold"><i class="fas fa-filter"></i> ตัวเลือกการแสดงผล</h6>
+            <i class="fas fa-chevron-up text-secondary" id="filterIcon"></i>
+        </div>
+        <div class="filter-content">
+            <div class="mb-2">
+                <label class="form-label small fw-bold">สถานะ</label>
+                <select class="form-select form-select-sm" id="statusFilter" onchange="loadDataAndRender()">
+                    <option value="all">ทั้งหมด</option>
+                    <option value="รอดำเนินการ">รอดำเนินการ</option>
+                    <option value="ดำเนินการแล้ว">ดำเนินการแล้ว</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold">ประเภทจุดเสี่ยง</label>
+                <select class="form-select form-select-sm" id="typeFilter" onchange="loadDataAndRender()">
+                    <option value="all">ทั้งหมด</option>
+                    <option value="ไม่มีไฟส่องสว่าง">ไม่มีไฟส่องสว่าง</option>
+                    <option value="โค้งอันตราย">โค้งอันตราย</option>
+                    <option value="จุดตัด/แยกอันตราย">จุดตัด/แยกอันตราย</option>
+                    <option value="ถนนชำรุด/เป็นหลุมบ่อ">ถนนชำรุด/เป็นหลุมบ่อ</option>
+                    <option value="น้ำท่วมขังบ่อย">น้ำท่วมขังบ่อย</option>
+                    <option value="รถใช้ความเร็วสูงบ่อย">รถใช้ความเร็วสูงบ่อย</option>
+                    <option value="ใกล้สถานศึกษา/ชุมชน">ใกล้สถานศึกษา/ชุมชน</option>
+                    <option value="ทางม้าลายไม่ชัดเจน">ทางม้าลายไม่ชัดเจน</option>
+                    <option value="อื่น ๆ">อื่น ๆ</option>
+                </select>
+            </div>
+            <button class="btn btn-primary btn-sm w-100" onclick="loadDataAndRender()">
+                <i class="fas fa-sync-alt"></i> อัปเดตข้อมูลหมุด
+            </button>
+        </div>
+    </div>
+    
+    <div class="instruction-toast">
+        <i class="fas fa-hand-pointer text-primary"></i> <span>คลิกบนแผนที่เพื่อปักหมุดแจ้งเหตุ</span>
+    </div>
+
+    <div id="layer-loading"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดขอบเขตพื้นที่...</div>
+
+    <div id="map"></div>
+
+    <script>
+        const BASE_URL = 'https://script.google.com/macros/s/AKfycbzijdD1QU4JU0Q4KZV9UZbDNgruBuGpCatWbASNdLcJiaetI_otDeIMdBgV10-8rrQR/exec';
+    </script>
+
+    <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1xmTQ_hd4n-FPyqIiUqPhAElgMRdYfUo&callback=initMap" async defer></script>
+
+    <script>
+        let map;
+        let allReports = [];
+        let markers = [];
+        let markerCluster = null;
+        let infoWindow;
+        let userMarker = null; // หมุดที่ผู้ใช้ปักเอง
+        let currentProCode = '45'; // เริ่มต้นที่ร้อยเอ็ด
+        let geocoder; 
+        
+        const SELAPHUM_POS = { lat: 16.0356, lng: 103.9592 };
+
+        function initMap() {
+            try {
+                geocoder = new google.maps.Geocoder();
+
+                map = new google.maps.Map(document.getElementById("map"), {
+                    zoom: 11,
+                    center: SELAPHUM_POS, 
+                    mapTypeId: google.maps.MapTypeId.SATELLITE,
+                    mapTypeControl: true,
+                    streetViewControl: true,
+                    fullscreenControl: true,
+                    mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR, position: google.maps.ControlPosition.TOP_RIGHT },
+                    fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+                });
+
+                infoWindow = new google.maps.InfoWindow();
+
+                // 1. คลิกพื้นที่ว่าง -> ปักหมุดผู้ใช้ (User Marker)
+                map.addListener("click", (e) => {
+                    placeUserMarker(e.latLng);
+                });
+
+                loadDataAndRender(); 
+                loadDistricts();
+
+            } catch (error) {
+                console.error("Map Init Error:", error);
+                alert("เกิดข้อผิดพลาดในการโหลดแผนที่");
+            }
+        }
+
+        // ฟังก์ชันสร้าง/ย้ายหมุดของผู้ใช้
+        function placeUserMarker(latLng) {
+            // ถ้ามีหมุดอยู่แล้ว ให้ย้ายตำแหน่ง
+            if (userMarker) {
+                userMarker.setPosition(latLng);
+            } else {
+                // ถ้ายังไม่มี ให้สร้างใหม่
+                userMarker = new google.maps.Marker({
+                    position: latLng,
+                    map: map,
+                    draggable: true, // ลากได้
+                    animation: google.maps.Animation.DROP,
+                    // สามารถเปลี่ยน icon ได้ที่นี่ถ้าต้องการให้ต่างจากหมุด report
+                });
+
+                // เมื่อลากหมุดเสร็จ ให้แสดง InfoWindow ใหม่
+                userMarker.addListener('dragend', function(e) {
+                    showUserMarkerInfo(e.latLng);
+                });
+
+                // คลิกที่หมุดตัวเองเพื่อดู InfoWindow
+                userMarker.addListener('click', function() {
+                    showUserMarkerInfo(userMarker.getPosition());
+                });
+            }
+            
+            showUserMarkerInfo(latLng);
+        }
+
+        function showUserMarkerInfo(latLng) {
+            infoWindow.close();
+            infoWindow.setContent('<div class="text-center p-2"><i class="fas fa-spinner fa-spin"></i> กำลังโหลดที่อยู่...</div>');
+            infoWindow.open(map, userMarker); // เปิดที่ userMarker
+
+            const lat = latLng.lat();
+            const lng = latLng.lng();
+
+            geocoder.geocode({ location: latLng }, (results, status) => {
+                let addressText = "พิกัดที่เลือก";
+                if (status === "OK" && results[0]) {
+                    addressText = results[0].formatted_address;
+                }
+                
+                // ส่งค่า Lat, Lng ไปยัง form.html ผ่าน URL Parameter
+                infoWindow.setContent(`
+                    <div style="max-width:260px;">
+                        <strong class="text-primary"><i class="fas fa-map-pin"></i> จุดที่คุณเลือก</strong>
+                        <div class="small text-muted mb-2 mt-1" style="line-height:1.2;">${addressText}</div>
+                        
+                        <div class="d-grid gap-2">
+                            <a href="form.html?lat=${lat}&lng=${lng}" class="btn btn-danger btn-sm text-white shadow-sm fw-bold">
+                                <i class="fas fa-exclamation-triangle"></i> แจ้งจุดเสี่ยงตรงนี้
+                            </a>
+                        </div>
+                        <div class="text-center mt-1">
+                            <small class="text-secondary" style="font-size:0.75rem;">(สามารถลากหมุดเพื่อปรับตำแหน่งได้)</small>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        function loadDistricts() {
+            const loadingEl = document.getElementById('layer-loading');
+            loadingEl.style.display = 'block';
+
+            map.data.loadGeoJson(
+                'https://raw.githubusercontent.com/chingchai/OpenGISData-Thailand/master/districts.geojson',
+                { idPropertyName: 'amp_code' },
+                function(features) {
+                    loadingEl.style.display = 'none';
+                    updateLayerStyle();
+                }
+            );
+
+            map.data.addListener('mouseover', function(event) {
+                if (document.getElementById('boundaryToggle').checked && event.feature.getProperty('pro_code') == currentProCode) {
+                    map.data.overrideStyle(event.feature, { 
+                        fillColor: '#198754', fillOpacity: 0.4, strokeWeight: 2, strokeColor: '#0f5132'
+                    });
+                    map.getDiv().setAttribute('title', 'อำเภอ' + event.feature.getProperty('amp_th'));
+                }
+            });
+
+            map.data.addListener('mouseout', function(event) {
+                map.data.revertStyle();
+                map.getDiv().setAttribute('title', '');
+            });
+
+            // คลิกที่ Polygon อำเภอ -> ให้ทำการปักหมุด
+            map.data.addListener('click', function(event) {
+                // ไม่ว่าจะเปิด Layer หรือไม่ เมื่อคลิกให้ทำการปักหมุดเสมอ เพื่อความสะดวกในการแจ้งเหตุ
+                placeUserMarker(event.latLng);
+            });
+        }
+
+        function updateLayerStyle() {
+            // FIX: เพิ่มการตรวจสอบว่า map ถูกสร้างหรือยัง
+            if (!map) return;
+
+            const isVisible = document.getElementById('boundaryToggle').checked;
+            
+            // ตรวจสอบว่า map.data พร้อมใช้งานหรือไม่
+            if (map.data) {
+                map.data.setStyle(function(feature) {
+                    const proCode = feature.getProperty('pro_code');
+                    if (isVisible && proCode == currentProCode) {
+                        return { 
+                            visible: true, fillColor: '#FFC107', fillOpacity: 0.1, 
+                            strokeColor: '#fff', strokeWeight: 1, clickable: true 
+                        };
+                    } else {
+                        return { visible: false };
+                    }
+                });
+            }
+        }
+
+        function changeProvince(code, latLng) {
+            currentProCode = code;
+            if(latLng && map) { // FIX: ตรวจสอบ map
+                map.panTo(latLng);
+                map.setZoom(10);
+            }
+            document.querySelectorAll('.btn-province').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            updateLayerStyle();
+        }
+
+        async function loadDataAndRender() {
+            try {
+                const response = await fetch(BASE_URL, { method: 'POST', body: JSON.stringify({ action: 'listReports' }) });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    allReports = result.data;
+                    renderMarkers();
+                }
+            } catch (error) { console.error("Error loading data:", error); }
+        }
+
+        function renderMarkers() {
+            if (markerCluster) markerCluster.clearMarkers();
+            markers.forEach(m => m.setMap(null));
+            markers = [];
+
+            const statusFilter = document.getElementById("statusFilter").value;
+            const typeFilter = document.getElementById("typeFilter").value;
+
+            const filteredData = allReports.filter(item => {
+                const matchStatus = (statusFilter === 'all') || (item.status === statusFilter);
+                const matchType = (typeFilter === 'all') || (item.type === typeFilter);
+                return matchStatus && matchType;
+            });
+
+            markers = filteredData.map((item, index) => {
+                const position = { lat: parseFloat(item.lat), lng: parseFloat(item.lng) };
+                const marker = new google.maps.Marker({ position: position, title: item.type });
+
+                marker.addListener("click", () => {
+                    // ปิด infoWindow ของ User Marker (ถ้ามี)
+                    if (userMarker) infoWindow.close();
+
+                    const statusColor = item.status === 'รอดำเนินการ' ? 'bg-danger' : 'bg-success';
+                    
+                    let imgHtml = '';
+                    if (item.imageUrl) {
+                        const urls = item.imageUrl.split(',');
+                        if (urls.length > 0 && urls[0].trim() !== "") {
+                            imgHtml = '<div class="gallery-container">';
+                            urls.forEach(url => {
+                                if(url.trim()) imgHtml += `<a href="${url}" target="_blank"><img src="${url}" class="gallery-img" alt="รูปจุดเสี่ยง"></a>`;
+                            });
+                            imgHtml += '</div>';
+                        } else {
+                            imgHtml = '<div class="text-center p-2 text-muted small bg-light mt-2 rounded">ไม่มีรูปภาพประกอบ</div>';
+                        }
+                    } else {
+                        imgHtml = '<div class="text-center p-2 text-muted small bg-light mt-2 rounded">ไม่มีรูปภาพประกอบ</div>';
+                    }
+
+                    const contentString = `
+                        <div style="min-width: 280px; max-width: 320px;">
+                            <h6 class="mb-1 fw-bold text-success">${item.type}</h6>
+                            <span class="badge ${statusColor} mb-2">${item.status}</span>
+                            <div class="mb-2"><span class="small text-dark">${item.detail || '-'}</span></div>
+                            
+                            <label class="small fw-bold text-muted">รูปภาพประกอบ:</label>
+                            ${imgHtml}
+                            
+                            <div class="upload-area">
+                                <label class="small fw-bold mb-1"><i class="fas fa-camera"></i> เพิ่มรูปภาพ</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="file" class="form-control" id="uploadFile-${item.rowIndex}" accept="image/*">
+                                    <button class="btn btn-outline-success" onclick="uploadAdditionalImage(${item.rowIndex})">
+                                        <i class="fas fa-upload"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                                <span class="text-muted small" style="font-size:10px;">
+                                    <i class="far fa-clock"></i> ${new Date(item.timestamp).toLocaleDateString('th-TH')}
+                                </span>
+                                <small class="text-muted">โดย: ${item.name || 'ไม่ระบุ'}</small>
+                            </div>
+                        </div>
+                    `;
+                    infoWindow.setContent(contentString);
+                    infoWindow.open(map, marker);
+                });
+                return marker;
+            });
+
+            if (window.markerClusterer && window.markerClusterer.MarkerClusterer) {
+                markerCluster = new markerClusterer.MarkerClusterer({ map, markers });
+            } else {
+                markers.forEach(m => m.setMap(map));
+            }
+        }
+
+        async function uploadAdditionalImage(rowIndex) {
+            const fileInput = document.getElementById(`uploadFile-${rowIndex}`);
+            if (fileInput.files.length === 0) {
+                Swal.fire('แจ้งเตือน', 'กรุณาเลือกไฟล์รูปภาพก่อน', 'warning');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = async function() {
+                const base64 = reader.result;
+                Swal.fire({
+                    title: 'กำลังอัปโหลด...',
+                    text: 'กรุณารอสักครู่',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                try {
+                    const response = await fetch(BASE_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ 
+                            action: 'updateImages', 
+                            rowIndex: rowIndex,
+                            imagesBase64: [base64] 
+                        })
+                    });
+                    const result = await response.json();
+                    
+                    if (result.status === 'success') {
+                        Swal.fire('สำเร็จ', 'เพิ่มรูปภาพเรียบร้อยแล้ว', 'success');
+                        infoWindow.close();
+                        loadDataAndRender();
+                    } else {
+                        Swal.fire('ผิดพลาด', result.message, 'error');
+                    }
+                } catch (error) {
+                    Swal.fire('ผิดพลาด', 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', 'error');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function toggleFilterBox() {
+            const box = document.getElementById('filterBox');
+            const icon = document.getElementById('filterIcon');
+            box.classList.toggle('collapsed');
+            icon.className = box.classList.contains('collapsed') ? 'fas fa-chevron-down text-secondary' : 'fas fa-chevron-up text-secondary';
+        }
+
+        function toggleProvinceBox() {
+            const box = document.getElementById('provinceBox');
+            const icon = document.getElementById('provinceIcon');
+            box.classList.toggle('collapsed');
+            icon.className = box.classList.contains('collapsed') ? 'fas fa-chevron-down text-white' : 'fas fa-chevron-up text-white';
+        }
+    </script>
+</body>
+</html>

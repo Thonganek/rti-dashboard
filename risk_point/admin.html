@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการข้อมูลจุดเสี่ยง (Admin)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }
+        .login-container { max-width: 400px; margin: 100px auto; padding: 30px; background: white; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .main-container { display: none; padding: 20px; }
+        .status-wait { color: #dc3545; font-weight: bold; }
+        .status-done { color: #198754; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <!-- Login Section -->
+    <div id="loginSection" class="login-container text-center">
+        <h4 class="mb-4 text-primary"><i class="fas fa-user-shield"></i> เข้าสู่ระบบเจ้าหน้าที่</h4>
+        <form id="loginForm">
+            <div class="mb-3 text-start">
+                <input type="text" class="form-control" id="username" placeholder="Username" required>
+            </div>
+            <div class="mb-3 text-start">
+                <input type="password" class="form-control" id="password" placeholder="Password" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Login</button>
+        </form>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div id="dashboardSection" class="main-container">
+        <nav class="navbar navbar-light bg-white shadow-sm mb-4 px-3 rounded">
+            <span class="navbar-brand mb-0 h1 text-primary"><i class="fas fa-tools"></i> จัดการข้อมูลจุดเสี่ยง</span>
+            <button class="btn btn-outline-danger btn-sm" onclick="logout()">Logout</button>
+        </nav>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title">รายการแจ้งเหตุทั้งหมด</h5>
+                    <button class="btn btn-success btn-sm" onclick="exportCSV()"><i class="fas fa-file-csv"></i> Export CSV</button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table id="reportTable" class="table table-hover table-bordered table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>เวลา</th>
+                                <th>ประเภท</th>
+                                <th>รายละเอียด</th>
+                                <th>พิกัด</th>
+                                <th>ผู้แจ้ง</th>
+                                <th>สถานะ</th>
+                                <th>รูปภาพ</th>
+                                <th>จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Modal -->
+    <div class="modal fade" id="updateModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">อัปเดตสถานะ</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editRowIndex">
+                    <div class="mb-3">
+                        <label class="form-label">สถานะการดำเนินงาน</label>
+                        <select class="form-select" id="editStatus">
+                            <option value="รอดำเนินการ">รอดำเนินการ</option>
+                            <option value="ประสานหน่วยงานแล้ว">ประสานหน่วยงานแล้ว</option>
+                            <option value="ดำเนินการแล้ว">ดำเนินการแล้ว</option>
+                            <option value="ปิดจ็อบ">ปิดจ็อบ</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">หมายเหตุเจ้าหน้าที่</label>
+                        <textarea class="form-control" id="editNote" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-primary" onclick="saveStatusUpdate()">บันทึก</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://script.google.com/macros/s/AKfycbzijdD1QU4JU0Q4KZV9UZbDNgruBuGpCatWbASNdLcJiaetI_otDeIMdBgV10-8rrQR/exec';
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        if (sessionStorage.getItem('isLoggedIn') === 'true') showDashboard();
+
+        $('#loginForm').on('submit', async function(e) {
+            e.preventDefault();
+            const username = $('#username').val();
+            const password = $('#password').val();
+            try {
+                const response = await fetch(BASE_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'login', username, password })
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    sessionStorage.setItem('isLoggedIn', 'true');
+                    sessionStorage.setItem('role', result.role);
+                    showDashboard();
+                } else {
+                    Swal.fire('Error', result.message, 'error');
+                }
+            } catch (error) { Swal.fire('Error', 'Connection failed', 'error'); }
+        });
+
+        function showDashboard() {
+            $('#loginSection').hide();
+            $('#dashboardSection').fadeIn();
+            loadReports();
+        }
+
+        function logout() { sessionStorage.clear(); location.reload(); }
+
+        let reportData = [];
+        async function loadReports() {
+            try {
+                const response = await fetch(BASE_URL, { method: 'POST', body: JSON.stringify({ action: 'listReports' }) });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    reportData = result.data;
+                    renderTable(reportData);
+                }
+            } catch (error) { console.error(error); }
+        }
+
+        function renderTable(data) {
+            const tbody = $('#tableBody');
+            tbody.empty();
+            data.forEach((item) => {
+                const dateStr = new Date(item.timestamp).toLocaleString('th-TH');
+                const statusClass = item.status === 'รอดำเนินการ' ? 'status-wait' : 'status-done';
+                
+                // Handle Images (Multiple)
+                let imgLinks = '-';
+                if (item.imageUrl) {
+                    const urls = item.imageUrl.split(',');
+                    imgLinks = urls.map((url, index) => 
+                        `<a href="${url}" target="_blank" class="badge bg-info text-decoration-none me-1">รูป ${index+1}</a>`
+                    ).join(' ');
+                }
+
+                const row = `
+                    <tr>
+                        <td class="small">${dateStr}</td>
+                        <td class="small text-truncate" style="max-width:100px;">${item.type}</td>
+                        <td class="small text-truncate" style="max-width:150px;">${item.detail}</td>
+                        <td class="small"><a href="https://www.google.com/maps?q=${item.lat},${item.lng}" target="_blank"><i class="fas fa-map-marker-alt"></i> Map</a></td>
+                        <td class="small">${item.name || '-'}<br>${item.phone || '-'}</td>
+                        <td><span class="${statusClass}">${item.status}</span><br><small class="text-muted" style="font-size:10px;">${item.note || ''}</small></td>
+                        <td>${imgLinks}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning py-0" onclick="openEditModal(${item.rowIndex}, '${item.status}', '${item.note}')"><i class="fas fa-edit"></i></button>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+            
+            if ($.fn.DataTable.isDataTable('#reportTable')) $('#reportTable').DataTable().destroy();
+            $('#reportTable').DataTable({ "order": [[ 0, "desc" ]], "language": { "url": "//cdn.datatables.net/plug-ins/1.13.4/i18n/th.json" } });
+        }
+
+        const updateModal = new bootstrap.Modal(document.getElementById('updateModal'));
+        window.openEditModal = function(rowIndex, status, note) {
+            $('#editRowIndex').val(rowIndex);
+            $('#editStatus').val(status);
+            $('#editNote').val(note);
+            updateModal.show();
+        }
+
+        window.saveStatusUpdate = async function() {
+            const rowIndex = $('#editRowIndex').val();
+            const status = $('#editStatus').val();
+            const note = $('#editNote').val();
+            Swal.fire({title: 'กำลังบันทึก...', didOpen: () => Swal.showLoading()});
+            try {
+                const response = await fetch(BASE_URL, { method: 'POST', body: JSON.stringify({ action: 'updateStatus', rowIndex, status, note }) });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    Swal.fire('สำเร็จ', 'อัปเดตเรียบร้อย', 'success');
+                    updateModal.hide();
+                    loadReports();
+                } else { Swal.fire('Error', 'เกิดข้อผิดพลาด', 'error'); }
+            } catch (error) { Swal.fire('Error', 'Connection failed', 'error'); }
+        }
+        
+        window.exportCSV = function() {
+             let csv = "Timestamp,Type,Detail,Lat,Lng,Status,Images\n";
+             reportData.forEach(row => {
+                 const imgs = row.imageUrl ? row.imageUrl.replace(/,/g, ' | ') : '';
+                 csv += `"${row.timestamp}","${row.type}","${row.detail}","${row.lat}","${row.lng}","${row.status}","${imgs}"\r\n`;
+             });
+             const link = document.createElement("a");
+             link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+             link.download = "hazard_report.csv";
+             link.click();
+        }
+    </script>
+</body>
+
+</html>
