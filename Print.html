@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานสอบสวนอุบัติเหตุทางถนน (D-RTI)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; background: #f5f5f5; font-size: 14px; color: #111; }
+        .report-wrap { max-width: 210mm; margin: 0 auto; background: #fff; padding: 15mm 18mm; border: 1px solid #ccc; }
+
+        .rpt-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 14px; }
+        .rpt-header h3 { font-size: 1.15rem; font-weight: 700; margin: 0; }
+        .rpt-header h5 { font-size: 0.95rem; font-weight: 500; margin: 2px 0 0; }
+
+        .sec-title { font-weight: 700; font-size: 0.9rem; background: #212529; color: #fff;
+                     padding: 4px 10px; border-radius: 4px; margin: 14px 0 8px; }
+        .sec-title-sub { font-weight: 700; font-size: 0.82rem; color: #495057;
+                     border-left: 4px solid #6c757d; padding: 2px 8px; margin: 8px 0 5px; }
+
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 4px 12px; }
+        .info-item { display: flex; flex-direction: column; }
+        .info-label { font-size: 0.72rem; color: #555; font-weight: 600; }
+        .info-val { border-bottom: 1px dotted #999; min-height: 20px; font-size: 0.88rem; padding: 1px 2px; white-space: pre-wrap; }
+
+        .badge-done    { background:#198754; color:#fff; padding:2px 8px; border-radius:20px; font-size:0.78rem; }
+        .badge-pending { background:#dc3545; color:#fff; padding:2px 8px; border-radius:20px; font-size:0.78rem; }
+
+        .risk-tbl { width:100%; border-collapse:collapse; font-size:0.82rem; }
+        .risk-tbl th { background:#f1f1f1; border:1px solid #ccc; padding:3px 6px; }
+        .risk-tbl td { border:1px solid #ccc; padding:3px 6px; }
+        .risk-tbl .val-yes { background:#fff3cd; font-weight:700; color:#856404; }
+        .risk-tbl .val-no  { background:#d1e7dd; }
+        .risk-tbl .val-unk { background:#f8f9fa; color:#888; }
+
+        .haddon-tbl { width:100%; border-collapse:collapse; font-size:0.82rem; }
+        .haddon-tbl th { background:#343a40; color:#fff; border:1px solid #555; padding:4px 8px; text-align:center; }
+        .haddon-tbl td { border:1px solid #ccc; padding:4px 8px; vertical-align:top; min-height:28px; white-space:pre-wrap; }
+        .haddon-tbl .row-label { background:#f8f9fa; font-weight:700; text-align:center; width:70px; }
+
+        .factor-box { border:1px solid #dee2e6; border-radius:6px; padding:8px 10px; margin-bottom:8px; }
+        .factor-content { font-size:0.85rem; white-space:pre-wrap; margin-top:3px; }
+
+        .measure-tbl { width:100%; border-collapse:collapse; font-size:0.82rem; }
+        .measure-tbl th { background:#f8f9fa; border:1px solid #dee2e6; padding:5px 8px; font-weight:700; }
+        .measure-tbl td { border:1px solid #dee2e6; padding:5px 8px; vertical-align:top; white-space:pre-wrap; }
+
+        .weakness-list { list-style:none; padding:0; margin:0 0 8px 0; }
+        .weakness-list li { border-left:4px solid #ffc107; background:#fffbf0; padding:4px 10px; margin-bottom:4px; border-radius:0 4px 4px 0; font-size:0.85rem; }
+
+        .veh-card { border:1px solid #ddd; border-radius:6px; padding:8px; margin-bottom:8px; }
+        .veh-card-title { font-weight:700; font-size:0.85rem; color:#dc3545; margin-bottom:4px; }
+        .pax-card { border:1px solid #b2dfdb; border-radius:6px; padding:7px; margin-bottom:7px; }
+        .party-card { border:1px solid #f5c6cb; border-radius:6px; padding:7px; margin-bottom:7px; font-size:0.82rem; }
+
+        .sig-row { display:flex; justify-content:space-between; margin-top:30px; }
+        .sig-box  { text-align:center; width:30%; }
+        .sig-line { border-top:1px solid #000; margin-top:40px; padding-top:4px; font-size:0.82rem; }
+
+        .gallery-grid { display:flex; flex-wrap:wrap; gap:8px; }
+
+        @media print {
+            body { background: none; }
+            .report-wrap { border: none; padding: 5mm 8mm; max-width: none; width: 100%; }
+            .no-print { display: none !important; }
+            .sec-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .factor-box, .risk-tbl, .haddon-tbl, .veh-card { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-3 mb-3 no-print text-center">
+    <button class="btn btn-success me-2" onclick="window.print()"><i class="fas fa-print me-2"></i>พิมพ์รายงาน</button>
+    <button class="btn btn-outline-secondary" onclick="window.close()"><i class="fas fa-times me-2"></i>ปิด</button>
+</div>
+
+<div class="report-wrap" id="reportContent">
+
+    <!-- Header -->
+    <div class="rpt-header">
+        <h3><i class="fas fa-file-medical-alt me-2"></i>รายงานการสอบสวนอุบัติเหตุทางถนน (D-RTI Online)</h3>
+        <h5>สำนักงานสาธารณสุขอำเภอเสลภูมิ — จังหวัดร้อยเอ็ด</h5>
+        <div style="font-size:0.8rem; margin-top:4px;">
+            รหัสรายงาน: <strong id="p_id">-</strong> &nbsp;|&nbsp;
+            วันที่พิมพ์: <strong id="p_print_date">-</strong> &nbsp;|&nbsp;
+            สถานะ: <span id="p_status_badge">-</span>
+        </div>
+    </div>
+
+    <!-- ส่วนที่ 1 -->
+    <div class="sec-title">ส่วนที่ 1: ข้อมูลเหตุการณ์และการแจ้งเหตุ</div>
+    <div class="info-grid">
+        <div class="info-item"><span class="info-label">ชื่อรายงาน</span><span class="info-val" id="p_report_name"></span></div>
+        <div class="info-item"><span class="info-label">ชื่อเหตุการณ์</span><span class="info-val" id="p_event_name"></span></div>
+        <div class="info-item"><span class="info-label">วันที่เกิดเหตุ</span><span class="info-val" id="p_accident_date"></span></div>
+        <div class="info-item"><span class="info-label">เวลาเกิดเหตุ</span><span class="info-val" id="p_accident_time"></span></div>
+        <div class="info-item"><span class="info-label">ประเภทอุบัติเหตุ</span><span class="info-val" id="p_accident_type"></span></div>
+        <div class="info-item"><span class="info-label">ลักษณะการชน</span><span class="info-val" id="p_collision_type"></span></div>
+        <div class="info-item"><span class="info-label">ประเภทเหตุการณ์</span><span class="info-val" id="p_incident_type"></span></div>
+        <div class="info-item"><span class="info-label">สัปดาห์ที่</span><span class="info-val" id="p_week_no"></span></div>
+        <div class="info-item"><span class="info-label">วันรับแจ้ง</span><span class="info-val" id="p_notification_date"></span></div>
+        <div class="info-item"><span class="info-label">เวลารับแจ้ง</span><span class="info-val" id="p_notification_time"></span></div>
+        <div class="info-item"><span class="info-label">เวลาถึงจุดเกิดเหตุ</span><span class="info-val" id="p_arrival_time"></span></div>
+        <div class="info-item"><span class="info-label">โรงพยาบาล</span><span class="info-val" id="p_hospital_name"></span></div>
+        <div class="info-item"><span class="info-label">วิธีนำส่ง</span><span class="info-val" id="p_referral_method"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">สถานที่เกิดเหตุ</span><span class="info-val" id="p_place"></span></div>
+        <div class="info-item"><span class="info-label">ถนน/เส้นทาง</span><span class="info-val" id="p_road_name"></span></div>
+        <div class="info-item"><span class="info-label">ตำบล</span><span class="info-val" id="p_subdistrict"></span></div>
+        <div class="info-item"><span class="info-label">อำเภอ</span><span class="info-val" id="p_district"></span></div>
+        <div class="info-item"><span class="info-label">จังหวัด</span><span class="info-val" id="p_province"></span></div>
+        <div class="info-item"><span class="info-label">พิกัด GIS (Lat/Lng)</span><span class="info-val" id="p_gis"></span></div>
+        <div class="info-item"><span class="info-label">ผู้แจ้งเหตุ</span><span class="info-val" id="p_notifier"></span></div>
+        <div class="info-item"><span class="info-label">หน่วยงานรับแจ้ง</span><span class="info-val" id="p_receiving_org"></span></div>
+    </div>
+
+    <!-- ส่วนที่ 2 -->
+    <div class="sec-title">ส่วนที่ 2: ข้อมูลผู้ประสบเหตุ</div>
+    <div class="info-grid">
+        <div class="info-item"><span class="info-label">ชื่อ-สกุล</span><span class="info-val" id="p_victim_name"></span></div>
+        <div class="info-item"><span class="info-label">อายุ</span><span class="info-val" id="p_victim_age"></span></div>
+        <div class="info-item"><span class="info-label">เพศ</span><span class="info-val" id="p_victim_gender"></span></div>
+        <div class="info-item"><span class="info-label">อาชีพ</span><span class="info-val" id="p_victim_occupation"></span></div>
+        <div class="info-item"><span class="info-label">สถานะ</span><span class="info-val" id="p_victim_status"></span></div>
+        <div class="info-item"><span class="info-label">หมวกนิรภัย / เข็มขัด</span><span class="info-val" id="p_victim_safety_gear"></span></div>
+        <div class="info-item"><span class="info-label">แอลกอฮอล์</span><span class="info-val" id="p_victim_alcohol"></span></div>
+        <div class="info-item"><span class="info-label">หมู่บ้าน</span><span class="info-val" id="p_victim_village"></span></div>
+        <div class="info-item"><span class="info-label">ตำบล</span><span class="info-val" id="p_victim_subdistrict"></span></div>
+        <div class="info-item"><span class="info-label">อำเภอ</span><span class="info-val" id="p_victim_district"></span></div>
+        <div class="info-item"><span class="info-label">จังหวัด</span><span class="info-val" id="p_victim_province"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">ที่อยู่</span><span class="info-val" id="p_victim_address"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">รายละเอียดการบาดเจ็บ</span><span class="info-val" id="p_victim_injury_detail"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">ข้อมูลผู้ประสบเหตุโดยสรุป</span><span class="info-val" id="p_victim_info_brief"></span></div>
+    </div>
+
+    <!-- ส่วนที่ 3 -->
+    <div class="sec-title">ส่วนที่ 3: ผลกระทบด้านสุขภาพ (Outcomes)</div>
+    <table class="table table-sm table-bordered mb-0" style="font-size:0.83rem;">
+        <thead class="table-light text-center">
+            <tr>
+                <th>ไม่บาดเจ็บ</th><th>บาดเจ็บ OPD</th><th>บาดเจ็บ Admit</th>
+                <th class="text-warning">รวมบาดเจ็บ</th><th>ตาย ณ จุดเกิดเหตุ</th><th>ตายขณะนำส่ง</th>
+                <th>ตาย ER</th><th>ตายตึกผู้ป่วย</th><th>ตายขณะส่งต่อ</th>
+                <th class="text-danger">รวมเสียชีวิต</th><th class="text-primary">รวมทั้งหมด</th>
+            </tr>
+        </thead>
+        <tbody><tr class="text-center fw-bold" id="p_outcomes_row">
+            <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
+        </tr></tbody>
+    </table>
+    <div class="info-grid mt-2">
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">การดำเนินการของ SRRT / ทีมสอบสวน</span><span class="info-val" id="p_srrt_action"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">การช่วยเหลือ/นำส่งหลังเกิดเหตุ</span><span class="info-val" id="p_post_rescue"></span></div>
+    </div>
+
+    <!-- ส่วนที่ 4 -->
+    <div class="sec-title">ส่วนที่ 4: การกู้ชีพและการปฐมพยาบาล (EMS)</div>
+    <div class="info-grid">
+        <div class="info-item"><span class="info-label">อุปสรรคการช่วยเหลือ</span><span class="info-val" id="p_rescue_obstacles"></span></div>
+        <div class="info-item"><span class="info-label">การปฐมพยาบาล (ABCDE)</span><span class="info-val" id="p_firstaid"></span></div>
+        <div class="info-item"><span class="info-label">สัญญาณเสียงรถพยาบาล</span><span class="info-val" id="p_amb_sound"></span></div>
+        <div class="info-item"><span class="info-label">สัญญาณไฟรถพยาบาล</span><span class="info-val" id="p_amb_light"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">รายละเอียดเหตุการณ์ (Narrative)</span><span class="info-val" id="p_narrative"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">Timeline การช่วยเหลือ</span><span class="info-val" id="p_timeline"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">สภาพแวดล้อมบริเวณที่เกิดเหตุ</span><span class="info-val" id="p_env_condition"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">สังเกตการณ์จากที่เกิดเหตุ</span><span class="info-val" id="p_scene_observation"></span></div>
+    </div>
+
+    <!-- ส่วนที่ 5 -->
+    <div class="sec-title">ส่วนที่ 5: ถนนและสิ่งแวดล้อม</div>
+    <div class="info-grid">
+        <div class="info-item"><span class="info-label">ประเภทถนน</span><span class="info-val" id="p_road_type"></span></div>
+        <div class="info-item"><span class="info-label">หมายเลขถนน</span><span class="info-val" id="p_road_number"></span></div>
+        <div class="info-item"><span class="info-label">ลักษณะทาง</span><span class="info-val" id="p_road_char"></span></div>
+        <div class="info-item"><span class="info-label">จำนวนเลน</span><span class="info-val" id="p_lanes"></span></div>
+        <div class="info-item"><span class="info-label">การแบ่งเลน</span><span class="info-val" id="p_lane_division"></span></div>
+        <div class="info-item"><span class="info-label">สัญญาณไฟจราจร</span><span class="info-val" id="p_traffic_light"></span></div>
+        <div class="info-item"><span class="info-label">ผิวจราจร</span><span class="info-val" id="p_surface"></span></div>
+        <div class="info-item"><span class="info-label">ทัศนวิสัย/แสงสว่าง</span><span class="info-val" id="p_weather"></span></div>
+        <div class="info-item"><span class="info-label">เครื่องหมายจราจร</span><span class="info-val" id="p_road_mark"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">ลักษณะถนน/บันทึกสภาพแวดล้อม</span><span class="info-val" id="p_road_env_remark"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">สิ่งแวดล้อมที่ส่งเสริมความรุนแรง</span><span class="info-val" id="p_enhancing"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">สิ่งแวดล้อมที่ช่วยลดความรุนแรง</span><span class="info-val" id="p_preventing"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">ข้อเสนอแนะด้านถนน/สิ่งแวดล้อม</span><span class="info-val" id="p_road_suggest"></span></div>
+    </div>
+
+    <!-- ส่วนที่ 6 -->
+    <div class="sec-title">ส่วนที่ 6: ผู้ขับขี่ (Driver)</div>
+    <div class="info-grid">
+        <div class="info-item"><span class="info-label">ชื่อ-สกุล</span><span class="info-val" id="p_driver_name"></span></div>
+        <div class="info-item"><span class="info-label">เลขบัตรประชาชน</span><span class="info-val" id="p_driver_cid"></span></div>
+        <div class="info-item"><span class="info-label">เพศ</span><span class="info-val" id="p_driver_gender"></span></div>
+        <div class="info-item"><span class="info-label">อายุ</span><span class="info-val" id="p_driver_age"></span></div>
+        <div class="info-item"><span class="info-label">อาชีพ</span><span class="info-val" id="p_driver_job"></span></div>
+        <div class="info-item"><span class="info-label">ประเภทผู้ขับขี่</span><span class="info-val" id="p_driver_type"></span></div>
+        <div class="info-item"><span class="info-label">สถานะบาดเจ็บ</span><span class="info-val" id="p_driver_status"></span></div>
+        <div class="info-item"><span class="info-label">การนำส่ง</span><span class="info-val" id="p_driver_transport"></span></div>
+        <div class="info-item"><span class="info-label">โรคประจำตัว</span><span class="info-val" id="p_driver_disease"></span></div>
+        <div class="info-item"><span class="info-label">ใบขับขี่</span><span class="info-val" id="p_driver_license"></span></div>
+        <div class="info-item"><span class="info-label">ประสบการณ์ (ปี)</span><span class="info-val" id="p_driver_exp"></span></div>
+        <div class="info-item"><span class="info-label">ทักษะการขับขี่</span><span class="info-val" id="p_driving_skill"></span></div>
+        <div class="info-item"><span class="info-label">ความคุ้นเคยเส้นทาง</span><span class="info-val" id="p_driver_familiarity"></span></div>
+        <div class="info-item"><span class="info-label">วัตถุประสงค์การเดินทาง</span><span class="info-val" id="p_driver_travel_purpose"></span></div>
+        <div class="info-item"><span class="info-label">เข็มขัดนิรภัย</span><span class="info-val" id="p_driver_seatbelt"></span></div>
+        <div class="info-item"><span class="info-label">หมวกนิรภัย</span><span class="info-val" id="p_driver_helmet"></span></div>
+        <div class="info-item"><span class="info-label">ความเร็วโดยประมาณ</span><span class="info-val" id="p_driver_speed"></span></div>
+        <div class="info-item"><span class="info-label">อาการหลังเกิดเหตุ</span><span class="info-val" id="p_driver_condition"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">ข้อมูลผู้ขับขี่รถจักรยานยนต์ (จากการสอบสวน)</span><span class="info-val" id="p_motorcycle_rider_info"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">ข้อมูลผู้ขับขี่รถยนต์/รถคู่กรณี (จากการสอบสวน)</span><span class="info-val" id="p_car_driver_info"></span></div>
+    </div>
+    <div style="margin-top:8px; font-weight:700; font-size:0.82rem; color:#b71c1c;">พฤติกรรมเสี่ยงผู้ขับขี่:</div>
+    <table class="risk-tbl">
+        <thead><tr><th>พฤติกรรม</th><th style="width:60px;" class="text-center">ผล</th><th>หมายเหตุ</th></tr></thead>
+        <tbody id="p_driver_risks"></tbody>
+    </table>
+
+    <!-- ส่วนที่ 7 -->
+    <div class="sec-title">ส่วนที่ 7: ยานพาหนะ</div>
+    <div id="p_vehicles_section"></div>
+
+    <!-- ส่วนที่ 8 -->
+    <div class="sec-title">ส่วนที่ 8: ผู้โดยสาร / คนเดินเท้า</div>
+    <div id="p_passengers_section"><p class="text-muted small">ไม่มีข้อมูลผู้โดยสาร</p></div>
+
+    <!-- ส่วนที่ 9 -->
+    <div class="sec-title">ส่วนที่ 9: ข้อมูลคู่กรณี</div>
+    <div id="p_parties_section"><p class="text-muted small">ไม่มีข้อมูลคู่กรณี</p></div>
+
+    <!-- ส่วนที่ 10: Haddon -->
+    <div class="sec-title">ส่วนที่ 10: Haddon's Matrix</div>
+    <table class="haddon-tbl">
+        <thead>
+            <tr><th>ปัจจัย</th><th>ก่อนชน (Pre-Crash)</th><th>ขณะชน (Crash)</th><th>หลังชน (Post-Crash)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td class="row-label">คน</td><td id="hd_human_pre"></td><td id="hd_human_crash"></td><td id="hd_human_post"></td></tr>
+            <tr><td class="row-label">รถ</td><td id="hd_veh_pre"></td><td id="hd_veh_crash"></td><td id="hd_veh_post"></td></tr>
+            <tr><td class="row-label">สิ่งแวดล้อม</td><td id="hd_env_pre"></td><td id="hd_env_crash"></td><td id="hd_env_post"></td></tr>
+        </tbody>
+    </table>
+
+    <!-- ส่วนที่ 11: ปัจจัยและความเสี่ยง -->
+    <div class="sec-title">ส่วนที่ 11: การวิเคราะห์ปัจจัยและความเสี่ยง</div>
+    <div class="sec-title-sub">ปัจจัยที่นำไปสู่การเกิดเหตุ</div>
+    <div id="factor_human_box" class="factor-box" style="border-left:4px solid #0d6efd;">
+        <div id="p_factor_human_title" style="font-weight:700;font-size:0.82rem;color:#0d6efd;margin-bottom:3px;">ด้านคน (Human Factor)</div>
+        <div class="factor-content" id="p_factor_human">-</div>
+    </div>
+    <div id="factor_veh_box" class="factor-box" style="border-left:4px solid #dc3545;">
+        <div style="font-weight:700;font-size:0.82rem;color:#dc3545;margin-bottom:3px;">ด้านยานพาหนะ (Vehicle Factor)</div>
+        <div class="factor-content" id="p_factor_vehicle">-</div>
+    </div>
+    <div id="factor_env_box" class="factor-box" style="border-left:4px solid #198754;">
+        <div style="font-weight:700;font-size:0.82rem;color:#198754;margin-bottom:3px;">ด้านสิ่งแวดล้อม (Environment Factor)</div>
+        <div class="factor-content" id="p_factor_environment">-</div>
+    </div>
+    <div class="sec-title-sub">การประเมินความเสี่ยง</div>
+    <table class="risk-tbl" id="risk_assess_tbl">
+        <thead><tr><th style="width:130px;">ด้าน</th><th>รายละเอียดความเสี่ยง</th></tr></thead>
+        <tbody>
+            <tr id="rrow_human"><td style="font-weight:700;color:#0d6efd;">คน</td><td id="p_risk_human" style="white-space:pre-wrap;"></td></tr>
+            <tr id="rrow_vehicle"><td style="font-weight:700;color:#dc3545;">ยานพาหนะ</td><td id="p_risk_vehicle" style="white-space:pre-wrap;"></td></tr>
+            <tr id="rrow_env"><td style="font-weight:700;color:#198754;">สิ่งแวดล้อม</td><td id="p_risk_environment" style="white-space:pre-wrap;"></td></tr>
+        </tbody>
+    </table>
+
+    <!-- ส่วนที่ 12: จุดอ่อนและมาตรการ -->
+    <div class="sec-title">ส่วนที่ 12: จุดอ่อนและมาตรการป้องกัน</div>
+    <div class="sec-title-sub">จุดอ่อนที่ระบุได้</div>
+    <ul class="weakness-list" id="p_weakness_list"></ul>
+    <div class="sec-title-sub">มาตรการป้องกันตามระดับ</div>
+    <table class="measure-tbl">
+        <thead><tr><th style="width:175px;" id="measure_col_header">ระดับ</th><th>มาตรการ</th></tr></thead>
+        <tbody>
+            <tr id="mrow_individual"><td style="font-weight:700;" id="mrow_individual_label">ระดับบุคคล</td><td id="p_measure_individual"></td></tr>
+            <tr id="mrow_community"><td style="font-weight:700;">ระดับชุมชน</td><td id="p_measure_community"></td></tr>
+            <tr id="mrow_env"><td style="font-weight:700;">ด้านสิ่งแวดล้อม/โครงสร้าง</td><td id="p_measure_env"></td></tr>
+            <tr id="mrow_policy"><td style="font-weight:700;">ระดับนโยบาย</td><td id="p_measure_policy"></td></tr>
+        </tbody>
+    </table>
+
+    <!-- ส่วนที่ 13: สรุปและข้อเสนอแนะ -->
+    <div class="sec-title">ส่วนที่ 13: สรุปและข้อเสนอแนะ</div>
+    <div class="info-grid">
+        <div class="info-item" style="grid-column:1/-1;" id="summary_factors_row">
+            <span class="info-label">สรุปปัจจัยที่นำไปสู่การเกิดเหตุ</span>
+            <span class="info-val" id="p_summary_factors"></span>
+        </div>
+        <div class="info-item" style="grid-column:1/-1;">
+            <span class="info-label">สิ่งที่ได้ดำเนินการไปแล้ว</span>
+            <span class="info-val" id="p_actions_taken"></span>
+        </div>
+        <div class="info-item" style="grid-column:1/-1;" id="suggestions_row">
+            <span class="info-label">ข้อเสนอแนะ / แนวทางป้องกัน</span>
+            <span class="info-val" id="p_suggestions"></span>
+        </div>
+        <div class="info-item" style="grid-column:1/-1; display:none;" id="p_hotspot_section">
+            <span class="info-label">สถานะจุดเสี่ยง (Hotspot Urgent)</span>
+            <span class="info-val" style="color:#dc3545;font-weight:700;" id="p_hotspot_urgent"></span>
+        </div>
+        <div class="info-item" style="grid-column:1/-1; display:none;" id="deep_analysis_row">
+            <span class="info-label">การวิเคราะห์เชิงลึก</span>
+            <span class="info-val" id="p_deep_analysis"></span>
+        </div>
+    </div>
+
+    <!-- ส่วนที่ 14: วัตถุประสงค์และวิธีการสอบสวน -->
+    <div class="sec-title" id="methodology_sec" style="display:none;">ส่วนที่ 14: วัตถุประสงค์และวิธีการสอบสวน</div>
+    <div id="methodology_body" style="display:none;">
+        <div class="info-grid">
+            <div class="info-item" style="grid-column:1/-1;" id="meth_study_obj_row">
+                <span class="info-label">วัตถุประสงค์การศึกษา</span>
+                <span class="info-val" id="p_study_objective"></span>
+            </div>
+            <div class="info-item" style="grid-column:1/-1;" id="meth_prev_row">
+                <span class="info-label">แนวทางป้องกัน (Prevention Guideline)</span>
+                <span class="info-val" id="p_prevention_guideline"></span>
+            </div>
+            <div class="info-item" id="meth_src_row">
+                <span class="info-label">แหล่งข้อมูล</span>
+                <span class="info-val" id="p_data_sources"></span>
+            </div>
+            <div class="info-item" id="meth_col_row">
+                <span class="info-label">วิธีการเก็บข้อมูล</span>
+                <span class="info-val" id="p_collection_methods"></span>
+            </div>
+            <div class="info-item" id="meth_tool_row">
+                <span class="info-label">เครื่องมือวิเคราะห์</span>
+                <span class="info-val" id="p_analysis_tools"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ส่วนที่ 15 -->
+    <div class="sec-title">ส่วนที่ 15: ผู้บันทึกและทีมสอบสวน</div>
+    <div class="info-grid">
+        <div class="info-item"><span class="info-label">ผู้บันทึก</span><span class="info-val" id="p_recorder_name"></span></div>
+        <div class="info-item"><span class="info-label">เบอร์โทร</span><span class="info-val" id="p_recorder_phone"></span></div>
+        <div class="info-item"><span class="info-label">อีเมล</span><span class="info-val" id="p_recorder_email"></span></div>
+        <div class="info-item"><span class="info-label">หน่วยงาน</span><span class="info-val" id="p_recorder_org"></span></div>
+        <div class="info-item"><span class="info-label">สถานะการสอบสวน</span><span class="info-val" id="p_investigation_status"></span></div>
+        <div class="info-item"><span class="info-label">ประเภททีม</span><span class="info-val" id="p_team_types"></span></div>
+        <div class="info-item"><span class="info-label">ผู้ควบคุมทีม</span><span class="info-val" id="p_inv_leader"></span></div>
+        <div class="info-item"><span class="info-label">วันเริ่ม–สิ้นสุด</span><span class="info-val" id="p_inv_dates"></span></div>
+        <div class="info-item" style="grid-column:1/-1"><span class="info-label">รายชื่อทีมสอบสวน</span><span class="info-val" id="p_inv_team"></span></div>
+        <div class="info-item"><span class="info-label">ตำรวจเจ้าของคดี</span><span class="info-val" id="p_police_name"></span></div>
+        <div class="info-item"><span class="info-label">ผู้ให้ข้อมูล</span><span class="info-val" id="p_informant_name"></span></div>
+    </div>
+
+    <!-- ส่วนที่ 16: ภาพประกอบ -->
+    <div class="sec-title" id="gallery_title_sec" style="display:none;">ส่วนที่ 16: ภาพประกอบ</div>
+    <div class="gallery-grid" id="p_gallery"></div>
+    <div id="p_simulation_section" style="display:none; margin-top:10px;">
+        <div class="sec-title-sub">แผนภาพจำลองเหตุการณ์</div>
+        <div id="p_simulation_desc" style="font-size:0.85rem;margin-bottom:6px;color:#444;white-space:pre-wrap;"></div>
+        <img id="p_simulation_img" src="" alt="แผนภาพจำลอง"
+             style="max-width:100%;border:1px solid #ccc;border-radius:4px;display:none;"
+             onerror="this.style.display='none'" />
+    </div>
+
+    <!-- ลายเซ็น -->
+    <div class="sig-row">
+        <div class="sig-box">
+            <div class="sig-line">ลงชื่อ .....................................  ผู้รายงาน</div>
+            <div style="font-size:0.78rem;margin-top:2px;">(<span id="p_sig_recorder">.................................</span>)</div>
+        </div>
+        <div class="sig-box">
+            <div class="sig-line">ลงชื่อ .....................................  ผู้ตรวจสอบ</div>
+            <div style="font-size:0.78rem;margin-top:2px;">(................................................................................................)</div>
+        </div>
+        <div class="sig-box">
+            <div class="sig-line">ลงชื่อ .....................................  สาธารณสุขอำเภอ</div>
+            <div style="font-size:0.78rem;margin-top:2px;">(................................................................................................)</div>
+        </div>
+    </div>
+    <div class="text-center mt-3" style="font-size:0.72rem;color:#888;border-top:1px solid #ddd;padding-top:6px;">
+        สร้างโดย D-RTI Online — สสอ.เสลภูมิ &nbsp;|&nbsp; พัฒนาโดย นายจรัญญู ทองเอนก
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ── Lookup maps ── */
+const INCIDENT_TYPE_MAP = { '1':'มีคู่กรณี','2':'ไม่มีคู่กรณี','3':'ชนคนเดินเท้า' };
+const ROAD_CHAR_MAP = { '1':'ทางตรง','2':'ทางโค้ง','3':'ทางแยก','4':'ทางม้าลาย','5':'ทางร่วม','6':'จุดกลับรถ','7':'บนสะพาน','8':'ลาดชันขึ้น','9':'ลาดชันลง','10':'บนไหล่เขา','11':'อื่นๆ' };
+const HELMET_MAP = { '1':'สวม (รัดคาง)','2':'สวม (ไม่รัดคาง)','3':'ไม่สวม','4':'ไม่ทราบ' };
+const SEATBELT_MAP = { '1':'ใช้','2':'ไม่ใช้','3':'ไม่ทราบ' };
+const FAMILIAR_MAP = { '1':'คนในพื้นที่ (ตำบล)','2':'คนนอกพื้นที่ (ในจังหวัด)','3':'คนนอกจังหวัด','4':'ต่างชาติ','5':'ไม่ทราบ' };
+const WEATHER_MAP = {'1':'มีแสงสว่างเพียงพอ','2':'มืด','3':'ฝนตก','4':'อื่นๆ'};
+const AMB_MAP = {'1':'มี และเปิด','2':'มี แต่ไม่เปิด','3':'ไม่มี','4':'ไม่ทราบ'};
+const VEH_TIRE_MAP = {'1':'ปกติ','2':'ล้อ/ยางชำรุด','3':'ยางหมดอายุ','4':'ยางลมอ่อน','5':'อื่นๆ','6':'ไม่ทราบ'};
+const VEH_BRAKE_MAP = {'1':'ปกติ','2':'เบรกไม่อยู่','3':'ผ้าเบรกหมด','4':'น้ำมันเบรกรั่ว','5':'อื่นๆ','6':'ไม่ทราบ'};
+const RISK_LABELS = {
+    risk_d_alc:'ดื่มแอลกอฮอล์', risk_d_speed:'ขับเร็วเกิน',
+    risk_d_sleep:'ง่วงนอน/หลับใน', risk_d_phone:'ใช้โทรศัพท์',
+    risk_d_violation:'ฝ่าฝืนสัญญาณ', risk_d_overload:'บรรทุกเกิน',
+    risk_d_overtake:'แซงผิดกฎหมาย', risk_d_crash_obj:'ชนสิ่งกีดขวาง',
+    risk_d_unsafe_eq:'อุปกรณ์ไม่ปลอดภัย', risk_d_med:'รับประทานยา'
+};
+const RISK_VAL_MAP = { '1':'ใช่','0':'ไม่ใช่','9':'ไม่ทราบ' };
+const PASS_RISK = {
+    risk_alc:'ดื่มแอลกอฮอล์', risk_ejected:'หลุดออกจากรถ',
+    risk_sleep:'หลับขณะเกิดเหตุ', risk_pickup_bed:'นั่งท้ายกระบะ',
+    risk_pickup_cab:'นั่งแค็บ', risk_unsafe:'อุปกรณ์ไม่ปลอดภัย',
+    risk_no_crosswalk:'ไม่ใช้ทางข้าม'
+};
+
+/* ── Helpers ── */
+const has  = v => v !== null && v !== undefined && String(v).trim() !== '' && String(v).trim() !== '-';
+const val  = v => has(v) ? String(v).trim() : '';
+const txt  = v => val(v) || '-';
+const isUrl = s => /^https?:\/\//i.test(String(s || '').trim());
+const fmtDate = ds => {
+    if (!ds) return '-';
+    const s = String(ds).trim();
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return s;
+    return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()+543}`;
+};
+const set  = (id, v) => { const e = document.getElementById(id); if (e) e.innerText = v; };
+const setH = (id, v) => { const e = document.getElementById(id); if (e) e.innerHTML = v; };
+const show = id => { const e = document.getElementById(id); if (e) e.style.display = ''; };
+const hide = id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; };
+const first = (...args) => args.find(v => has(v)) || '';
+
+window.onload = () => {
+    const s = localStorage.getItem('rti_print_data');
+    if (!s) {
+        document.getElementById('reportContent').innerHTML =
+            '<div class="alert alert-danger text-center m-4">ไม่พบข้อมูลรายงาน กรุณากลับไปเลือกรายการใหม่</div>';
+        return;
+    }
+    renderReport(JSON.parse(s));
+};
+
+function renderReport(r) {
+
+    /* ── Header ── */
+    set('p_id', txt(r.id));
+    set('p_print_date', fmtDate(new Date().toISOString()));
+    const status = val(r.investigation_status) || val(r.status);
+    setH('p_status_badge',
+        status.includes('เสร็จ')
+            ? '<span class="badge-done">เสร็จสิ้น</span>'
+            : '<span class="badge-pending">อยู่ระหว่างดำเนินการ</span>');
+
+    /* ── ส่วนที่ 1 ── */
+    set('p_report_name',       txt(r.report_name));
+    set('p_event_name',        txt(r.event_name));
+    set('p_accident_date',     fmtDate(r.accident_date));
+    set('p_accident_time',     txt(r.accident_time));
+    set('p_accident_type',     txt(r.accident_type));
+    set('p_collision_type',    first(r.collision_type, r.collision_type_other));
+    set('p_incident_type',     INCIDENT_TYPE_MAP[r.incident_type_main] || txt(r.incident_type_main));
+    set('p_week_no',           txt(r.week_no));
+    set('p_notification_date', fmtDate(r.notification_date));
+    set('p_notification_time', txt(r.notification_time));
+    set('p_arrival_time',      txt(r.first_scene_arrival_time));
+    set('p_hospital_name',     txt(r.hospital_name));
+    set('p_referral_method',   txt(r.referral_method));
+    const placeArr = [r.accident_place, r.incident_address_detail].filter(v => has(v) && val(v) !== val(r.accident_place) ? true : v === r.accident_place);
+    set('p_place',     first(r.accident_place, r.incident_address_detail) || '-');
+    set('p_road_name', txt(r.road_name));
+    set('p_subdistrict', txt(r.accident_subdistrict));
+    set('p_district',    txt(r.accident_district));
+    set('p_province',    txt(r.accident_province));
+    set('p_gis',         (has(r.lat) && has(r.lng)) ? `${r.lat}, ${r.lng}` : '-');
+    set('p_notifier',    first([r.notifier_name, r.notifier_org_type].filter(has).join(' / '), r.notifier_name) || '-');
+    set('p_receiving_org', txt(r.receiving_org));
+
+    /* ── ส่วนที่ 2: ผู้ประสบเหตุ ── */
+    const driverFullName = [r.driver_fname, r.driver_lname].filter(has).join(' ');
+    const vName   = first(r.victim_name, r.driver_name, driverFullName);
+    const vAge    = first(r.victim_age, r.driver_age);
+    const vGender = first(r.victim_gender, r.driver_gender);
+    const vOcc    = first(r.victim_occupation, r.driver_job);
+    const vStatus = first(r.driver_status, r.injury_status);
+    const hMap    = HELMET_MAP[r.driver_helmet_usage] || val(r.helmet_status);
+    const sbMap   = SEATBELT_MAP[r.driver_seatbelt_usage] || val(r.seatbelt_status);
+    const vGear   = first(r.safety_gear_status,
+        [hMap ? `หมวก: ${hMap}` : '', sbMap ? `เข็มขัด: ${sbMap}` : ''].filter(Boolean).join(', '));
+    const alcRaw  = val(r.alcohol_status);
+    const alcDrv  = r.risk_d_alc == '1' ? 'ดื่มแอลกอฮอล์' : r.risk_d_alc == '0' ? 'ไม่ดื่มแอลกอฮอล์' : '';
+    const vAlc    = first(alcRaw, alcDrv);
+    const vInjury = first(r.injury_detail, r.driver_condition_post_crash);
+    const vBrief  = has(r.victim_info_brief) ? r.victim_info_brief
+        : [vName, vAge ? `อายุ ${vAge} ปี` : '', vGender, vOcc, vStatus].filter(has).join(' | ');
+
+    set('p_victim_name',         txt(vName));
+    set('p_victim_age',          vAge ? `${vAge} ปี` : '-');
+    set('p_victim_gender',       txt(vGender));
+    set('p_victim_occupation',   txt(vOcc));
+    set('p_victim_status',       txt(vStatus));
+    set('p_victim_safety_gear',  txt(vGear));
+    set('p_victim_alcohol',      txt(vAlc));
+    set('p_victim_village',      txt(r.victim_village));
+    set('p_victim_subdistrict',  txt(first(r.victim_subdistrict, r.accident_subdistrict)));
+    set('p_victim_district',     txt(first(r.victim_district, r.accident_district)));
+    set('p_victim_province',     txt(first(r.victim_province, r.accident_province)));
+    set('p_victim_address',      txt(r.victim_address));
+    set('p_victim_injury_detail',txt(vInjury));
+    set('p_victim_info_brief',   txt(vBrief));
+
+    /* ── ส่วนที่ 3: Outcomes ── */
+    const ocRow = document.getElementById('p_outcomes_row');
+    if (ocRow) ocRow.innerHTML = [
+        r.injure_no_hospital, r.injure_opd, r.injure_ipd,
+        `<strong>${r.total_injured || 0}</strong>`,
+        r.dead_scene, first(r.dead_transit, r.dead_refer), r.dead_er, r.dead_ward, r.dead_refer_out,
+        `<strong class="text-danger">${r.total_dead || 0}</strong>`,
+        `<strong class="text-primary">${r.total_affected || 0}</strong>`
+    ].map(v => `<td>${v ?? '-'}</td>`).join('');
+    set('p_srrt_action', txt(first(r.srrt_action, r.post_incident_rescue)));
+    set('p_post_rescue', txt(r.post_incident_rescue));
+
+    /* ── ส่วนที่ 4: EMS ── */
+    const obs = [];
+    if (r.rescue_obstacle_cutting == 1) obs.push('ใช้เครื่องตัดถ่าง');
+    if (r.rescue_obstacle_fire == 1)    obs.push('ขาดอุปกรณ์ดับเพลิง');
+    if (r.rescue_obstacle_water == 1)   obs.push('ช่วยเหลือขึ้นจากน้ำ');
+    set('p_rescue_obstacles', obs.length ? obs.join(', ') : 'ไม่มี');
+
+    const fa = [];
+    if (r.firstaid_a_airway == 1)    fa.push('A:นำสิ่งแปลกปลอมออก');
+    if (r.firstaid_a_collar == 1)    fa.push('A:เฝือกรองคอ');
+    if (r.firstaid_b_oxygen == 1)    fa.push('B:ออกซิเจน');
+    if (r.firstaid_b_intubate == 1)  fa.push('B:ใส่ท่อช่วยหายใจ');
+    if (r.firstaid_c_cpr == 1)       fa.push('C:CPR');
+    if (r.firstaid_c_iv == 1)        fa.push('C:น้ำเกลือ');
+    if (r.firstaid_d_splint == 1)    fa.push(`D:ดามกระดูก(${r.firstaid_d_splint_pos || ''})`);
+    if (r.firstaid_e_stopbleed == 1) fa.push(`E:ห้ามเลือด(${r.firstaid_e_stopbleed_pos || ''})`);
+    set('p_firstaid',  fa.length ? fa.join(', ') : 'ไม่มีข้อมูล');
+    set('p_amb_sound', AMB_MAP[r.ambulance_sound] || txt(r.ambulance_sound));
+    set('p_amb_light', AMB_MAP[r.ambulance_light] || txt(r.ambulance_light));
+    set('p_narrative', txt(r.incident_notify_detail));
+    set('p_timeline',  txt(r.accident_timeline));
+
+    // environment condition — ดึงจากทั้ง new และ old field
+    const envCond = first(r.environment_condition, r.road_characteristics);
+    set('p_env_condition', txt(envCond));
+    // scene observation — จาก old "scene_image_url" ที่บางรายการใช้เก็บ text
+    const sceneObs = has(r.scene_image_url) && !isUrl(r.scene_image_url) ? r.scene_image_url : '';
+    set('p_scene_observation', txt(sceneObs));
+
+    /* ── ส่วนที่ 5: ถนน ── */
+    set('p_road_type',    txt(r.road_type));
+    set('p_road_number',  txt(r.road_number));
+    // road_char: ใช้ ROAD_CHAR_MAP สำหรับ code; ถ้า text ก็แสดงตรงๆ
+    const rcCode = ROAD_CHAR_MAP[r.road_characteristics];
+    set('p_road_char',    rcCode || txt(r.road_characteristics));
+    set('p_lanes',        txt(r.total_lanes));
+    set('p_lane_division',txt(r.lane_division));
+    set('p_traffic_light',txt(r.traffic_light));
+    set('p_surface',      first(r.traffic_surface, r.road_surface_type) || '-');
+    set('p_weather',      WEATHER_MAP[r.weather_visibility] || txt(r.weather_visibility));
+    set('p_road_mark',    txt(r.road_markings));
+    set('p_road_env_remark', txt(r.road_env_remark));
+    const enh = [];
+    if (r.env_enhance_shop == 1)   enh.push('ร้านค้า/แผงลอย');
+    if (r.env_enhance_canal == 1)  enh.push('คู/คลอง/แม่น้ำ');
+    if (r.env_enhance_object == 1) enh.push('วัสดุหล่น');
+    if (has(r.promoting_factor))   enh.push(r.promoting_factor);
+    set('p_enhancing', enh.length ? enh.join(', ') : 'ไม่มี');
+    const prev = [];
+    if (r.env_prevent_rail == 1)    prev.push('Guard rail');
+    if (r.env_prevent_barrier == 1) prev.push('แบริเออร์');
+    if (r.env_prevent_cushion == 1) prev.push('วัสดุรับแรงกระแทก');
+    if (has(r.preventing_factor))   prev.push(r.preventing_factor);
+    set('p_preventing',   prev.length ? prev.join(', ') : 'ไม่มี');
+    set('p_road_suggest', txt(r.suggestion_prevention_road));
+
+    /* ── ส่วนที่ 6: ผู้ขับขี่ ── */
+    set('p_driver_name',    txt(first(r.driver_name, driverFullName)));
+    set('p_driver_cid',     txt(r.driver_cid));
+    set('p_driver_gender',  txt(r.driver_gender));
+    set('p_driver_age',     has(r.driver_age) ? `${r.driver_age} ปี` : '-');
+    set('p_driver_job',     txt(r.driver_job));
+    set('p_driver_type',    txt(r.driver_type));
+    set('p_driver_status',  txt(first(r.driver_status, r.injury_status)));
+    set('p_driver_transport', txt(first(r.driver_transport_by, r.transport_method)));
+    set('p_driver_disease', txt(r.driver_disease));
+    set('p_driver_license', txt(r.driver_license));
+    set('p_driver_exp',     has(r.driving_experience) ? `${r.driving_experience} ปี` : '-');
+    set('p_driving_skill',  txt(r.driving_skill));
+    set('p_driver_familiarity', FAMILIAR_MAP[r.driver_familiarity_detail] || txt(first(r.driver_familiarity_detail, r.route_familiarity)));
+    set('p_driver_travel_purpose', txt(r.driver_travel_purpose));
+    set('p_driver_seatbelt', SEATBELT_MAP[r.driver_seatbelt_usage] || txt(r.driver_seatbelt_usage));
+    set('p_driver_helmet',   HELMET_MAP[r.driver_helmet_usage] || txt(r.driver_helmet_usage));
+    set('p_driver_speed',    [r.speed_estimate, has(r.speed_avg) ? `${r.speed_avg} กม./ชม.` : ''].filter(has).join(' / ') || '-');
+    set('p_driver_condition', txt(r.driver_condition_post_crash));
+    set('p_motorcycle_rider_info', txt(r.motorcycle_rider_info));
+    set('p_car_driver_info',       txt(r.car_driver_info));
+
+    // risk table — รวม old-format fields เป็น fallback
+    const OLD_RISK_MAP = {
+        risk_d_sleep: r.drowsy_driving,
+        risk_d_phone: r.phone_use,
+        risk_d_violation: r.traffic_violation
+    };
+    const riskTbody = document.getElementById('p_driver_risks');
+    if (riskTbody) riskTbody.innerHTML = Object.entries(RISK_LABELS).map(([k, label]) => {
+        let raw = String(r[k] ?? '');
+        if (!raw || raw === '9') raw = String(OLD_RISK_MAP[k] ?? '9');
+        const v = raw || '9';
+        const lbl = RISK_VAL_MAP[v] || (v === '1' ? 'ใช่' : v === '0' ? 'ไม่ใช่' : 'ไม่ทราบ');
+        const cls = v === '1' ? 'val-yes' : v === '0' ? 'val-no' : 'val-unk';
+        const det = (k === 'risk_d_alc' && r.risk_d_alc_detail) ? r.risk_d_alc_detail : '';
+        return `<tr><td>${label}</td><td class="text-center ${cls}">${lbl}</td><td class="text-muted small">${det}</td></tr>`;
+    }).join('');
+
+    /* ── ส่วนที่ 7: ยานพาหนะ ── */
+    const vehSec = document.getElementById('p_vehicles_section');
+    if (vehSec) {
+        let vh = '';
+        for (let i = 1; i <= 3; i++) {
+            const pfx = i === 1 ? '' : `v${i}_`;
+            const brand = val(r[pfx+'vehicle_brand']);
+            const vtype = val(r[pfx+'vehicle_type_detail']);
+            if (!brand && !vtype && i > 1) continue;
+            // ข้อมูลเพิ่มเติมเฉพาะยานพาหนะนั้น (motorcycle_detail / pickup_detail)
+            const vehNarr = i === 1 ? first(r.motorcycle_detail, r.pickup_detail) : '';
+            const safetyItems = [];
+            if (val(r[pfx+'veh_modify']) && r[pfx+'veh_modify'] !== 'ไม่มี') safetyItems.push(`ดัดแปลง: ${r[pfx+'veh_modify']}`);
+            if (val(r[pfx+'veh_fire'])   && r[pfx+'veh_fire']   !== 'ไม่มี') safetyItems.push(`ถังดับเพลิง: ${r[pfx+'veh_fire']}`);
+            if (val(r[pfx+'veh_gas'])    && r[pfx+'veh_gas']    !== 'ไม่มี') safetyItems.push(`ถังแก๊ส: ${r[pfx+'veh_gas']}`);
+            if (val(r[pfx+'veh_seatbelt'])) safetyItems.push(`เข็มขัด: ${r[pfx+'veh_seatbelt']}`);
+            vh += `<div class="veh-card">
+                <div class="veh-card-title">ยานพาหนะคันที่ ${i}</div>
+                <div class="info-grid">
+                    <div class="info-item"><span class="info-label">ประเภท</span><span class="info-val">${txt(vtype)}</span></div>
+                    <div class="info-item"><span class="info-label">ยี่ห้อ/รุ่น</span><span class="info-val">${brand ? brand+' '+val(r[pfx+'vehicle_model']) : '-'}</span></div>
+                    <div class="info-item"><span class="info-label">ทะเบียน</span><span class="info-val">${txt(r[pfx+'vehicle_license_plate'])}</span></div>
+                    <div class="info-item"><span class="info-label">ซีซี</span><span class="info-val">${txt(r[pfx+'vehicle_cc'])}</span></div>
+                    <div class="info-item"><span class="info-label">อายุรถ (ปี)</span><span class="info-val">${txt(r[pfx+'vehicle_age_years'])}</span></div>
+                    <div class="info-item"><span class="info-label">วันตรวจสภาพ</span><span class="info-val">${fmtDate(r[pfx+'vehicle_inspection_date'])}</span></div>
+                    <div class="info-item"><span class="info-label">ประกันภัย</span><span class="info-val">${txt(r[pfx+'veh_insurance_class'])}</span></div>
+                    <div class="info-item"><span class="info-label">สภาพยาง</span><span class="info-val">${VEH_TIRE_MAP[r[pfx+'veh_tire_condition']] || txt(r[pfx+'veh_tire_condition'])}</span></div>
+                    <div class="info-item"><span class="info-label">ระบบเบรก</span><span class="info-val">${VEH_BRAKE_MAP[r[pfx+'veh_brake_condition']] || txt(r[pfx+'veh_brake_condition'])}</span></div>
+                    <div class="info-item"><span class="info-label">ถุงลมนิรภัย</span><span class="info-val">${txt(r[pfx+'veh_airbag'])}</span></div>
+                    <div class="info-item"><span class="info-label">GPS / กล้องหน้า</span><span class="info-val">${txt(r[pfx+'veh_gps'])} / ${txt(r[pfx+'veh_dashcam'])}</span></div>
+                    ${safetyItems.length ? `<div class="info-item"><span class="info-label">อุปกรณ์ความปลอดภัย</span><span class="info-val">${safetyItems.join(' | ')}</span></div>` : ''}
+                    ${val(r[pfx+'vehicle_more_detail']) ? `<div class="info-item" style="grid-column:1/-1"><span class="info-label">รายละเอียดเพิ่มเติม</span><span class="info-val">${r[pfx+'vehicle_more_detail']}</span></div>` : ''}
+                    ${vehNarr ? `<div class="info-item" style="grid-column:1/-1"><span class="info-label">สภาพ/รายละเอียดยานพาหนะ (จากการสอบสวน)</span><span class="info-val">${vehNarr}</span></div>` : ''}
+                </div></div>`;
+        }
+        vehSec.innerHTML = vh || '<p class="text-muted small">ไม่มีข้อมูลยานพาหนะ</p>';
+    }
+
+    /* ── ส่วนที่ 8: ผู้โดยสาร ── */
+    const passSec = document.getElementById('p_passengers_section');
+    if (passSec) {
+        let ph = '';
+        for (let i = 1; i <= 10; i++) {
+            // รองรับทั้ง p1_name (new) และ passenger1_name (old)
+            const pname = first(r[`p${i}_name`], r[`passenger${i}_name`]);
+            if (!has(pname) && i > 5) continue; // ตัดที่ 5 ถ้าไม่มีข้อมูล
+            if (!has(pname)) continue;
+            const pRisks = Object.entries(PASS_RISK).filter(([k]) => r[`p${i}_${k}`] == '1' || r[`passenger${i}_${k}`] == '1').map(([,l]) => l);
+            const pNat  = val(r[`p${i}_nationality`]);
+            const pOcc  = val(r[`p${i}_occupation`]);
+            const pPurp = val(r[`p${i}_travel_purpose`]);
+            const pDis  = val(r[`p${i}_disease`]);
+            const pAlc  = val(first(r[`p${i}_risk_alc`] == '1' ? 'ดื่มแอลกอฮอล์' : '', r[`passenger${i}_alcohol`]));
+            const extras = [pNat ? `สัญชาติ: ${pNat}` : '', pOcc ? `อาชีพ: ${pOcc}` : '', pPurp ? `วัตถุประสงค์: ${pPurp}` : '', pDis ? `โรคประจำตัว: ${pDis}` : ''].filter(Boolean).join(' | ');
+            ph += `<div class="pax-card">
+                <div class="fw-bold" style="font-size:0.82rem;color:#00695c;">ผู้โดยสาร/คนเดินเท้า ${i}: ${pname}</div>
+                <div class="info-grid" style="font-size:0.8rem;">
+                    <div class="info-item"><span class="info-label">ประเภท</span><span class="info-val">${txt(first(r[`p${i}_type`], r[`passenger${i}_gender`]))}</span></div>
+                    <div class="info-item"><span class="info-label">อายุ</span><span class="info-val">${txt(first(r[`p${i}_age`], r[`passenger${i}_age`]))} ปี</span></div>
+                    <div class="info-item"><span class="info-label">สถานะบาดเจ็บ</span><span class="info-val">${txt(first(r[`p${i}_status`], r[`passenger${i}_injury`]))}</span></div>
+                    <div class="info-item"><span class="info-label">ตำแหน่งนั่ง</span><span class="info-val">${txt(first(r[`p${i}_position`], r[`passenger${i}_position`]))}</span></div>
+                    <div class="info-item"><span class="info-label">แอลกอฮอล์</span><span class="info-val">${txt(pAlc)}</span></div>
+                    <div class="info-item"><span class="info-label">พฤติกรรมเสี่ยง</span><span class="info-val">${pRisks.length ? pRisks.join(', ') : 'ไม่มี'}</span></div>
+                    ${extras ? `<div class="info-item" style="grid-column:1/-1"><span class="info-label">ข้อมูลเพิ่มเติม</span><span class="info-val">${extras}</span></div>` : ''}
+                    <div class="info-item" style="grid-column:1/-1"><span class="info-label">รายละเอียดบาดแผล</span><span class="info-val">${txt(first(r[`p${i}_injury`], r[`passenger${i}_injury`]))}</span></div>
+                </div></div>`;
+        }
+        passSec.innerHTML = ph || '<p class="text-muted small">ไม่มีข้อมูลผู้โดยสาร</p>';
+    }
+
+    /* ── ส่วนที่ 9: คู่กรณี ── */
+    const partSec = document.getElementById('p_parties_section');
+    if (partSec) {
+        let pth = '';
+        for (let i = 1; i <= 5; i++) {
+            if (!has(r[`party${i}_name`])) continue;
+            pth += `<div class="party-card">
+                <span class="fw-bold text-danger">คู่กรณี ${i}:</span>
+                ${txt(r[`party${i}_name`])} | อายุ ${txt(r[`party${i}_age`])} | เพศ ${txt(r[`party${i}_gender`])} |
+                ประเภท: ${txt(r[`party${i}_type`])} |
+                ยานพาหนะ: ${txt(r[`party${i}_vehicle`])} |
+                สถานะ: ${txt(r[`party${i}_injury`])} |
+                แอลกอฮอล์: ${first(r[`party${i}_alc`], r[`party${i}_alcohol`]) || '-'}
+                ${has(r[`party${i}_detail`]) ? '<br><span class="text-muted">รายละเอียด: '+r[`party${i}_detail`]+'</span>' : ''}
+            </div>`;
+        }
+        partSec.innerHTML = pth || '<p class="text-muted small">ไม่มีข้อมูลคู่กรณี</p>';
+    }
+
+    /* ── ส่วนที่ 10: Haddon ── */
+    set('hd_human_pre',   txt(r.haddon_human_pre));
+    set('hd_human_crash', txt(r.haddon_human_crash));
+    set('hd_human_post',  txt(r.haddon_human_post));
+    set('hd_veh_pre',     txt(r.haddon_vehicle_pre));
+    set('hd_veh_crash',   txt(r.haddon_vehicle_crash));
+    set('hd_veh_post',    txt(r.haddon_vehicle_post));
+    set('hd_env_pre',     txt(r.haddon_env_pre));
+    set('hd_env_crash',   txt(r.haddon_env_crash));
+    set('hd_env_post',    txt(r.haddon_env_post));
+
+    /* ── ส่วนที่ 11: ปัจจัยและความเสี่ยง ── */
+    let summaryUsedIn11 = false;
+    const fh = val(r.factor_human);
+    const fv = val(r.factor_vehicle);
+    const fe = val(r.factor_environment);
+    if (fh || fv || fe) {
+        document.getElementById('p_factor_human').innerText = fh || '-';
+        document.getElementById('p_factor_vehicle').innerText = fv || '-';
+        document.getElementById('p_factor_environment').innerText = fe || '-';
+        if (!fv) hide('factor_veh_box');
+        if (!fe) hide('factor_env_box');
+    } else {
+        const sf = val(r.summary_factors);
+        if (sf) {
+            summaryUsedIn11 = true;
+            const tEl = document.getElementById('p_factor_human_title');
+            const bEl = document.getElementById('factor_human_box');
+            if (tEl) { tEl.innerText = 'ปัจจัยที่นำไปสู่การเกิดเหตุ (สรุปรวม)'; tEl.style.color = '#495057'; }
+            if (bEl) bEl.style.borderLeftColor = '#6c757d';
+            document.getElementById('p_factor_human').innerText = sf;
+            hide('factor_veh_box');
+            hide('factor_env_box');
+        } else {
+            document.getElementById('p_factor_human').innerText = '-';
+            hide('factor_veh_box');
+            hide('factor_env_box');
+        }
+    }
+    const rh = val(r.risk_human), rv = val(r.risk_vehicle), re = val(r.risk_environment);
+    if (rh || rv || re) {
+        set('p_risk_human',       rh || '-');
+        set('p_risk_vehicle',     rv || '-');
+        set('p_risk_environment', re || '-');
+        if (!rh) hide('rrow_human');
+        if (!rv) hide('rrow_vehicle');
+        if (!re) hide('rrow_env');
+    } else {
+        hide('risk_assess_tbl');
+    }
+
+    /* ── ส่วนที่ 12: จุดอ่อนและมาตรการ ── */
+    const wList = [r.weakness_point_1, r.weakness_point_2, r.weakness_point_3, r.weakness_point_4].filter(has);
+    const weakEl = document.getElementById('p_weakness_list');
+    if (weakEl) weakEl.innerHTML = wList.length
+        ? wList.map(w => `<li>${w}</li>`).join('')
+        : '<li style="color:#aaa;border-left-color:#ccc;">ไม่มีข้อมูลจุดอ่อน</li>';
+
+    let suggestionsUsedIn12 = false;
+    const mi = val(r.measure_individual), mc = val(r.measure_community);
+    const me = val(r.measure_env_struct),  mp = val(r.measure_policy);
+    if (mi || mc || me || mp) {
+        set('p_measure_individual', mi || '-');
+        set('p_measure_community',  mc || '-');
+        set('p_measure_env',        me || '-');
+        set('p_measure_policy',     mp || '-');
+        if (!mi) hide('mrow_individual');
+        if (!mc) hide('mrow_community');
+        if (!me) hide('mrow_env');
+        if (!mp) hide('mrow_policy');
+    } else {
+        const sug = val(r.suggestions);
+        if (sug) {
+            suggestionsUsedIn12 = true;
+            const lEl = document.getElementById('mrow_individual_label');
+            if (lEl) lEl.innerText = 'แนวทางป้องกัน (รวมทุกระดับ)';
+            set('p_measure_individual', sug);
+            hide('mrow_community'); hide('mrow_env'); hide('mrow_policy');
+        } else {
+            set('p_measure_individual', '-');
+            hide('mrow_community'); hide('mrow_env'); hide('mrow_policy');
+        }
+    }
+
+    /* ── ส่วนที่ 13: สรุป ── */
+    summaryUsedIn11 ? hide('summary_factors_row') : set('p_summary_factors', txt(r.summary_factors));
+    set('p_actions_taken', txt(r.actions_taken));
+    suggestionsUsedIn12 ? hide('suggestions_row') : set('p_suggestions', txt(r.suggestions));
+    if (has(r.deep_analysis)) {
+        show('deep_analysis_row');
+        set('p_deep_analysis', txt(r.deep_analysis));
+    }
+    if (has(r.hotspot_urgent)) {
+        show('p_hotspot_section');
+        set('p_hotspot_urgent', txt(r.hotspot_urgent));
+    }
+
+    /* ── ส่วนที่ 14: วิธีวิจัย/สอบสวน (แสดงเฉพาะมีข้อมูล) ── */
+    const methFields = [r.study_objective, r.prevention_guideline, r.data_sources, r.collection_methods, r.analysis_tools];
+    if (methFields.some(has)) {
+        show('methodology_sec');
+        show('methodology_body');
+        set('p_study_objective',    txt(r.study_objective));
+        set('p_prevention_guideline', txt(r.prevention_guideline));
+        set('p_data_sources',       txt(r.data_sources));
+        set('p_collection_methods', txt(r.collection_methods));
+        set('p_analysis_tools',     txt(r.analysis_tools));
+        if (!has(r.study_objective))    hide('meth_study_obj_row');
+        if (!has(r.prevention_guideline)) hide('meth_prev_row');
+        if (!has(r.data_sources))       hide('meth_src_row');
+        if (!has(r.collection_methods)) hide('meth_col_row');
+        if (!has(r.analysis_tools))     hide('meth_tool_row');
+    }
+
+    /* ── ส่วนที่ 15: ทีมสอบสวน ── */
+    set('p_recorder_name',  txt(r.recorder_name));
+    set('p_recorder_phone', txt(r.recorder_phone));
+    set('p_recorder_email', txt(r.recorder_email));
+    set('p_recorder_org',   txt(r.recorder_org));
+    set('p_investigation_status', txt(first(r.investigation_status, r.status)));
+    const teams = [];
+    if (r.team_type_1 == 1 || r.team_type_1 === 'JIT')  teams.push('JIT');
+    if (r.team_type_2 == 1 || r.team_type_2 === 'SAT')  teams.push('SAT');
+    if (r.team_type_3 == 1 || r.team_type_3 === 'SRRT') teams.push('SRRT');
+    if (r.team_type_4 == 1 || r.team_type_4 === 'CDCU') teams.push('CDCU');
+    set('p_team_types', teams.length ? teams.join(', ') : txt(r.team_type_1));
+    set('p_inv_leader', txt(r.investigation_leader));
+    const d1 = fmtDate(r.investigation_start_date), d2 = fmtDate(r.investigation_end_date);
+    set('p_inv_dates', [d1, d2].filter(v => v !== '-').join(' — ') || '-');
+    const teamArr = [r.investigation_team,
+        r.additional_investigator_1, r.additional_investigator_2, r.additional_investigator_3,
+        r.additional_investigator_4, r.additional_investigator_5].filter(has);
+    set('p_inv_team',       teamArr.length ? teamArr.join(', ') : '-');
+    set('p_police_name',    [r.police_name, r.police_phone].filter(has).join(' โทร.') || '-');
+    set('p_informant_name', [r.informant_name, r.informant_phone].filter(has).join(' โทร.') || '-');
+    set('p_sig_recorder', txt(r.recorder_name));
+
+    /* ── ส่วนที่ 16: ภาพประกอบ ── */
+    const gallDiv   = document.getElementById('p_gallery');
+    const gallTitle = document.getElementById('gallery_title_sec');
+    const gallImgs  = [];
+
+    // รวม URL จากทุก field
+    if (has(r.gallery_urls)) {
+        r.gallery_urls.split(/[|,]/).map(u => u.trim()).filter(u => isUrl(u)).forEach(u => gallImgs.push({url: u, desc: ''}));
+    }
+    // scene_image_url ถ้าเป็น URL จริง
+    if (has(r.scene_image_url) && isUrl(r.scene_image_url)) gallImgs.push({url: r.scene_image_url, desc: 'สถานที่เกิดเหตุ'});
+    // motorcycle_image_url
+    if (has(r.motorcycle_image_url) && isUrl(r.motorcycle_image_url)) gallImgs.push({url: r.motorcycle_image_url, desc: 'รถจักรยานยนต์'});
+    // pickup_image_url
+    if (has(r.pickup_image_url) && isUrl(r.pickup_image_url)) gallImgs.push({url: r.pickup_image_url, desc: 'รถกระบะ/คู่กรณี'});
+
+    if (gallImgs.length > 0) {
+        show('gallery_title_sec');
+        const descs = has(r.gallery_descriptions) ? r.gallery_descriptions.split('|') : [];
+        gallDiv.innerHTML = gallImgs.map((img, i) => {
+            const d = img.desc || descs[i] || '';
+            return `<div style="width:calc(50% - 4px);">
+                <img src="${img.url}" style="width:100%;max-height:160px;object-fit:cover;border:1px solid #ccc;border-radius:4px;"
+                     onerror="this.style.display='none'">
+                ${d ? `<div style="font-size:0.7rem;text-align:center;color:#555;margin-top:2px;">${d}</div>` : ''}
+            </div>`;
+        }).join('');
+    }
+
+    const hasDiagram = has(r.simulation_diagram_url) && isUrl(r.simulation_diagram_url);
+    const hasSimDesc = has(r.simulation_desc);
+    if (hasDiagram || hasSimDesc) {
+        const simSec = document.getElementById('p_simulation_section');
+        simSec.style.display = 'block';
+        show('gallery_title_sec');
+        if (hasSimDesc) document.getElementById('p_simulation_desc').innerText = r.simulation_desc;
+        if (hasDiagram) {
+            const si = document.getElementById('p_simulation_img');
+            si.src = r.simulation_diagram_url;
+            si.style.display = 'block';
+        }
+    }
+}
+</script>
+</body>
+</html>
