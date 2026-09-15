@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แบบสอบสวนอุบัติเหตุทางถนน (ฉบับสมบูรณ์ 2565)</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #fce4ec;
+            padding-bottom: 100px;
+        }
+
+        /* Sticky Navigation */
+        .step-navigator {
+            position: sticky; top: 0; z-index: 1020;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px);
+            padding: 10px 0; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 30px;
+            overflow-x: auto; white-space: nowrap;
+        }
+        .nav-pills .nav-link { color: #666; font-weight: 600; border-radius: 50px; padding: 8px 20px; margin-right: 10px; border: 1px solid #eee; }
+        .nav-pills .nav-link.active { background-color: #ff5252; color: white; border-color: #ff5252; box-shadow: 0 4px 6px rgba(255, 82, 82, 0.3); }
+
+        /* Form Styling */
+        .form-section { scroll-margin-top: 80px; margin-bottom: 40px; }
+        .section-badge { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #ff5252; color: white; border-radius: 50%; font-weight: bold; margin-right: 15px; }
+        .section-title { color: #c62828; font-weight: 700; font-size: 1.4rem; margin-bottom: 20px; border-bottom: 2px solid #ffcdd2; padding-bottom: 10px; }
+        
+        .section-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #ffebee; }
+        .section-header { background-color: #fff5f5; color: #b71c1c; padding: 12px 20px; font-weight: 700; border-left: 5px solid #ff5252; border-radius: 12px 12px 0 0; }
+        .card-body-custom { padding: 20px; }
+
+        .map-container { border-radius: 12px; height: 500px; border: 2px solid #eee; width: 100%; } /* Increased Height */
+        .img-upload-slot { border: 2px dashed #ddd; border-radius: 12px; padding: 15px; background: #fafafa; }
+        .preview-box img { max-height: 150px; width: 100%; object-fit: cover; border-radius: 8px; margin-top: 10px; }
+        
+        .risk-table th { background-color: #ffebee; font-size: 0.95rem; color: #b71c1c; text-align: center; }
+        .risk-table td { vertical-align: middle; }
+        
+        .action-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px 0; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); z-index: 1030; text-align: center; }
+        
+        /* Custom Tabs for Vehicles/Passengers */
+        .nav-tabs .nav-link { color: #555; font-weight: 600; }
+        .nav-tabs .nav-link.active { color: #d32f2f; background-color: #fff5f5; border-color: #ffcdd2 #ffcdd2 #fff; }
+
+        @media print { .step-navigator, .action-bar, .no-print { display: none !important; } }
+
+        /* AI Assist Button */
+        .btn-ai {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: white; border: none; border-radius: 20px;
+            padding: 4px 14px; font-size: 0.82rem; font-weight: 600;
+            cursor: pointer; transition: all .2s;
+            box-shadow: 0 2px 8px rgba(124,58,237,.35);
+        }
+        .btn-ai:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(124,58,237,.5); color: white; }
+        .btn-ai:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+        .ai-modal-header { background: linear-gradient(135deg, #7c3aed, #4f46e5); }
+        .ai-field-row td { vertical-align: top; padding: 4px 6px !important; }
+        .ai-field-row textarea { font-size: 0.82rem; min-height: 80px; }
+    </style>
+</head>
+<body data-bs-spy="scroll" data-bs-target="#stepNavigator" data-bs-offset="100">
+
+    <!-- Loading -->
+    <div id="loadingOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; display:none; justify-content:center; align-items:center; flex-direction:column;">
+        <div class="spinner-border text-danger" role="status"></div>
+        <div class="mt-2 fw-bold text-danger">กำลังบันทึกข้อมูล...</div>
+    </div>
+
+    <!-- Search Victims Modal -->
+    <div class="modal fade" id="searchVictimsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-search me-2"></i>ค้นหาผู้เสียชีวิต — เลือกเคสเพื่อสอบสวน</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Summary badges -->
+                    <div id="searchSummaryBadges" class="d-flex gap-2 mb-3 flex-wrap" style="display:none!important;"></div>
+
+                    <!-- Filters -->
+                    <div class="row g-2 mb-3 align-items-end p-2 bg-light rounded">
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-danger">วันที่เริ่มต้น</label>
+                            <input type="date" class="form-control form-control-sm" id="searchStartDate" onchange="filterSearchTable()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold text-danger">วันที่สิ้นสุด</label>
+                            <input type="date" class="form-control form-control-sm" id="searchEndDate" onchange="filterSearchTable()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold">ค้นหาชื่อ-สกุล</label>
+                            <input type="text" class="form-control form-control-sm" id="searchName" placeholder="พิมพ์ชื่อ..." oninput="filterSearchTable()">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold">สถานะการสอบสวน</label>
+                            <select class="form-select form-select-sm" id="searchStatus" onchange="filterSearchTable()">
+                                <option value="">ทั้งหมด</option>
+                                <option value="pending">ยังไม่สอบสวน</option>
+                                <option value="done">สอบสวนแล้ว</option>
+                            </select>
+                        </div>
+                        <div class="col-12 d-flex align-items-center gap-2 flex-wrap">
+                            <button class="btn btn-outline-secondary btn-sm" onclick="resetSearch()"><i class="fas fa-undo me-1"></i>รีเซ็ต</button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="loadSearchData()"><i class="fas fa-sync-alt me-1"></i>โหลดข้อมูลใหม่</button>
+                            <span class="ms-2 small" id="searchCount"></span>
+                            <span class="ms-auto d-flex gap-2">
+                                <span class="badge bg-success py-2"><i class="fas fa-check-circle me-1"></i>สอบสวนแล้ว</span>
+                                <span class="badge bg-danger py-2"><i class="fas fa-clock me-1"></i>ยังไม่สอบสวน</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Loading -->
+                    <div id="searchLoading" class="text-center py-5" style="display:none;">
+                        <div class="spinner-border text-danger" style="width:3rem;height:3rem;"></div>
+                        <div class="mt-3 fw-bold text-danger">กำลังโหลดข้อมูลจาก Data Center...</div>
+                        <div class="text-muted small mt-1">อาจใช้เวลา 5-15 วินาที</div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="table-responsive" style="max-height:420px; overflow-y:auto;">
+                        <table class="table table-sm table-hover table-bordered align-middle mb-0">
+                            <thead class="table-danger" style="position:sticky; top:0; z-index:2;">
+                                <tr>
+                                    <th style="width:105px;">วันที่เกิดเหตุ</th>
+                                    <th>ชื่อ-สกุล</th>
+                                    <th style="width:90px;" class="text-center">เพศ/อายุ</th>
+                                    <th>อาชีพ</th>
+                                    <th>ยานพาหนะ</th>
+                                    <th>ตำบล</th>
+                                    <th style="width:140px;">สถานะ</th>
+                                    <th style="width:110px;" class="text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="searchTableBody">
+                                <tr><td colspan="8" class="text-center text-muted py-4">กดปุ่ม <strong>"โหลดข้อมูลใหม่"</strong> เพื่อดึงข้อมูล</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <small class="text-muted me-auto"><i class="fas fa-database me-1"></i>ข้อมูล: Data Center (CSV) — เฉพาะผู้เสียชีวิต</small>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4">
+                <div class="modal-header bg-danger text-white"><h5 class="modal-title">กรุณาเข้าสู่ระบบ</h5></div>
+                <div class="modal-body p-4 text-center">
+                    <a href="RTI_Dashboard.html" class="btn btn-primary w-100 rounded-pill">กลับไปหน้า Dashboard เพื่อ Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigator -->
+    <div class="step-navigator no-print">
+        <div class="container" style="max-width: 1200px;">
+            <ul class="nav nav-pills" id="stepNavigator">
+                <li class="nav-item"><a class="nav-link active" href="#step1">1. สถานการณ์/EMS</a></li>
+                <li class="nav-item"><a class="nav-link" href="#step2">2. ยานพาหนะ</a></li>
+                <li class="nav-item"><a class="nav-link" href="#step3">3. ถนน/สิ่งแวดล้อม</a></li>
+                <li class="nav-item"><a class="nav-link" href="#step4">4. ผู้ขับขี่/ผู้โดยสาร</a></li>
+                <li class="nav-item"><a class="nav-link" href="#step5">5. คู่กรณี</a></li>
+                <li class="nav-item"><a class="nav-link" href="#step6">6. วิเคราะห์/สรุป/รูปภาพ</a></li>
+                <li class="nav-item"><a class="nav-link" href="#step7">7. ผู้บันทึก</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Form -->
+    <div class="container" style="max-width: 1100px;">
+        <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+            <div>
+                <h4 class="text-danger fw-bold mb-0"><i class="fas fa-file-medical-alt me-2"></i>แบบสอบสวนอุบัติเหตุ (ฉบับสมบูรณ์)</h4>
+                <small class="text-muted">เพิ่มข้อมูล EMS, สภาพรถ, ถนนละเอียด, พฤติกรรมเสี่ยงผู้โดยสาร</small>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <button class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm" onclick="openSearchModal()">
+                    <i class="fas fa-search me-2"></i>ค้นหาผู้เสียชีวิต
+                </button>
+                <a href="RTI_Dashboard.html" class="btn btn-outline-secondary rounded-pill px-4"><i class="fas fa-arrow-left me-2"></i> กลับ</a>
+            </div>
+        </div>
+
+        <form id="investigationForm" class="needs-validation" novalidate>
+            <input type="hidden" id="reportId" name="id">
+            <input type="hidden" id="reporterUsername" name="reporter_username">
+            <input type="hidden" id="galleryUrls" name="gallery_urls">
+            <input type="hidden" id="galleryDescriptions" name="gallery_descriptions"> 
+
+            <!-- STEP 1: SITUATION & ADMIN -->
+            <div id="step1" class="form-section">
+                <div class="section-title"><span class="section-badge">1</span> ส่วนที่ 1: สถานการณ์และการช่วยเหลือ (EMS)</div>
+                
+                <!-- 1.1 ข้อมูลการแจ้งเหตุ -->
+                <div class="section-card">
+                    <div class="section-header">ข้อมูลการแจ้งเหตุ (Event Administration)</div>
+                    <div class="card-body-custom">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label class="form-label">ชื่อรายงาน <span class="text-danger">*</span></label><input type="text" class="form-control" name="report_name" required></div>
+                            <div class="col-md-6"><label class="form-label">ชื่อเหตุการณ์</label><input type="text" class="form-control" name="event_name"></div>
+                            
+                            <div class="col-md-3"><label class="form-label">วันรับแจ้ง</label><input type="date" class="form-control" name="notification_date"></div>
+                            <div class="col-md-3"><label class="form-label">เวลารับแจ้ง</label><input type="time" class="form-control" name="notification_time"></div>
+                            <div class="col-md-6"><label class="form-label">เวลาเข้าถึงจุดเกิดเหตุครั้งแรก</label><input type="time" class="form-control" name="first_scene_arrival_time"></div>
+
+                            <div class="col-md-5"><label class="form-label">ผู้แจ้งข่าว (ชื่อ-สกุล)</label><input type="text" class="form-control" name="notifier_name"></div>
+                            <div class="col-md-4"><label class="form-label">ประเภทหน่วยงานผู้แจ้ง</label><input type="text" class="form-control" name="notifier_org_type"></div>
+                            <div class="col-md-12"><label class="form-label">หน่วยงานที่รับแจ้ง</label><input type="text" class="form-control" name="receiving_org"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.2 วันเวลาและพิกัด -->
+                <div class="section-card">
+                    <div class="section-header">ข้อมูลวันเวลาและพิกัด (Time & Geo)</div>
+                    <div class="card-body-custom">
+                        <div class="row g-3">
+                            <div class="col-md-4"><label class="form-label">วันที่เกิดเหตุ <span class="text-danger">*</span></label><input type="date" class="form-control" name="accident_date" required></div>
+                            <div class="col-md-4"><label class="form-label">เวลาเกิดเหตุ</label><input type="time" class="form-control" name="accident_time" required></div>
+                            <div class="col-md-4"><label class="form-label">ประเภทเหตุการณ์</label>
+                                <select class="form-select" name="incident_type_main">
+                                    <option value="1">มีคู่กรณี</option><option value="2">ไม่มีคู่กรณี</option><option value="3">ชนคนเดินเท้า</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-12"><label class="form-label">สถานที่เกิดเหตุ</label><input type="text" class="form-control" name="accident_place" placeholder="จุดสังเกต..."></div>
+                            <div class="col-12"><label class="form-label">ที่อยู่/รายละเอียดสถานที่อื่น ๆ</label><input type="text" class="form-control" name="incident_address_detail"></div>
+                            
+                            <div class="col-md-3"><label class="form-label">ตำบล</label><input type="text" class="form-control" name="accident_subdistrict"></div>
+                            <div class="col-md-3"><label class="form-label">อำเภอ</label><input type="text" class="form-control" name="accident_district" value="เสลภูมิ"></div>
+                            <div class="col-md-3"><label class="form-label">จังหวัด</label><input type="text" class="form-control" name="accident_province" value="ร้อยเอ็ด"></div>
+                            <div class="col-md-3"><label class="form-label">ประเทศ</label><input type="text" class="form-control" name="accident_country" value="ไทย"></div>
+
+                            <div class="col-12 mt-3">
+                                <label class="form-label fw-bold text-primary">พิกัด GIS (Latitude/Longitude)</label>
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text">Lat</span><input type="text" class="form-control" name="lat" id="latInput" readonly>
+                                    <span class="input-group-text">Long</span><input type="text" class="form-control" name="lng" id="lngInput" readonly>
+                                </div>
+                                <div id="mapForm" class="map-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.3 ผลกระทบ -->
+                <div class="section-card">
+                    <div class="section-header">ผลกระทบด้านสุขภาพ (Outcomes) - ระบบคำนวณอัตโนมัติ</div>
+                    <div class="card-body-custom">
+                        <div class="row g-3">
+                             <div class="col-md-3"><label class="small">จำนวนผู้ไม่บาดเจ็บ/ไม่มา รพ.</label><input type="number" class="form-control calc-injured" name="injure_no_hospital" oninput="calculateOutcomes()"></div>
+                             <div class="col-md-3"><label class="small">จำนวนผู้บาดเจ็บเล็กน้อย (OPD)</label><input type="number" class="form-control calc-injured" name="injure_opd" oninput="calculateOutcomes()"></div>
+                             <div class="col-md-3"><label class="small">จำนวนผู้บาดเจ็บ (Admit/IPD)</label><input type="number" class="form-control calc-injured" name="injure_ipd" oninput="calculateOutcomes()"></div>
+                             <div class="col-md-3"><label class="small fw-bold">รวมจำนวนผู้บาดเจ็บ</label><input type="number" class="form-control border-warning bg-light fw-bold" name="total_injured" readonly></div>
+                             
+                             <div class="col-12"><hr class="my-1"></div>
+                             <div class="col-md-2"><label class="small">จำนวนตายที่เกิดเหตุ</label><input type="number" class="form-control calc-dead" name="dead_scene" oninput="calculateOutcomes()"></div>
+                             <div class="col-md-2"><label class="small">จำนวนตายขณะนำส่ง</label><input type="number" class="form-control calc-dead" name="dead_transit" oninput="calculateOutcomes()"></div>
+                             <div class="col-md-2"><label class="small">จำนวนตาย ER</label><input type="number" class="form-control calc-dead" name="dead_er" oninput="calculateOutcomes()"></div>
+                             <div class="col-md-2"><label class="small">จำนวนตายตึกผู้ป่วย</label><input type="number" class="form-control calc-dead" name="dead_ward" oninput="calculateOutcomes()"></div>
+                             <div class="col-md-2"><label class="small">จำนวนตายขณะส่งต่อ</label><input type="number" class="form-control calc-dead" name="dead_refer_out" oninput="calculateOutcomes()"></div>
+                             <div class="col-md-2"><label class="small fw-bold text-danger">รวมจำนวนผู้เสียชีวิต</label><input type="number" class="form-control border-danger bg-light fw-bold" name="total_dead" readonly></div>
+                             
+                             <div class="col-12 text-end">
+                                 <label class="small fw-bold fs-5">จำนวนผู้ประสบเหตุทั้งหมด (บาดเจ็บ+เสียชีวิต):</label> 
+                                 <input type="number" class="d-inline-block form-control w-auto fs-5 fw-bold text-primary" name="total_affected" readonly>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.4 EMS Details (NEW) -->
+                <div class="section-card border-success border-2">
+                    <div class="section-header bg-success text-white">ข้อมูลการช่วยเหลือและกู้ชีพ (EMS Details)</div>
+                    <div class="card-body-custom">
+                        <div class="row g-3">
+                            <div class="col-12"><label class="fw-bold">อุปสรรคในการช่วยเหลือ</label></div>
+                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="rescue_obstacle_cutting"><label>ต้องใช้เครื่องตัดถ่าง</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="rescue_obstacle_fire"><label>ขาดอุปกรณ์ดับเพลิง</label></div></div>
+                            <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="rescue_obstacle_water"><label>การช่วยเหลือขึ้นจากน้ำ</label></div></div>
+                            
+                            <div class="col-12 border-top mt-3 pt-2"><label class="fw-bold">การปฐมพยาบาล (First Aid)</label></div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">A: Airway/C-Spine</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="firstaid_a_airway"><label class="small">นำสิ่งแปลกปลอมออก</label></div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="firstaid_a_collar"><label class="small">ใส่เฝือกรองคอ</label></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">B: Breathing</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="firstaid_b_oxygen"><label class="small">ให้ออกซิเจน</label></div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="firstaid_b_intubate"><label class="small">ใส่ท่อช่วยหายใจ</label></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">C: Circulation</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="firstaid_c_cpr"><label class="small">CPR</label></div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="firstaid_c_iv"><label class="small">ให้น้ำเกลือ</label></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">D: Disability (ดามกระดูก)</label>
+                                <div class="input-group input-group-sm">
+                                    <div class="input-group-text"><input class="form-check-input mt-0" type="checkbox" name="firstaid_d_splint"></div>
+                                    <input type="text" class="form-control" name="firstaid_d_splint_pos" placeholder="ระบุตำแหน่ง...">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">E: Exposure (ห้ามเลือด)</label>
+                                <div class="input-group input-group-sm">
+                                    <div class="input-group-text"><input class="form-check-input mt-0" type="checkbox" name="firstaid_e_stopbleed"></div>
+                                    <input type="text" class="form-control" name="firstaid_e_stopbleed_pos" placeholder="ระบุตำแหน่ง...">
+                                </div>
+                            </div>
+
+                            <div class="col-12 border-top mt-3 pt-2"><label class="fw-bold">กรณีรถพยาบาล (Ambulance Signals)</label></div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">การใช้สัญญาณเสียง</label>
+                                <select class="form-select form-select-sm" name="ambulance_sound">
+                                    <option value="">-เลือก-</option><option value="1">มี และเปิด</option><option value="2">มี แต่ไม่เปิด</option><option value="3">ไม่มี</option><option value="4">ไม่ทราบ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">การใช้สัญญาณไฟ</label>
+                                <select class="form-select form-select-sm" name="ambulance_light">
+                                    <option value="">-เลือก-</option><option value="1">มี และเปิด</option><option value="2">มี แต่ไม่เปิด</option><option value="3">ไม่มี</option><option value="4">ไม่ทราบ</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.5 Narrative -->
+                <div class="section-card">
+                    <div class="section-header">รายละเอียดและ Timeline</div>
+                    <div class="card-body-custom">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">รายละเอียดเหตุการณ์ (Narrative)</label>
+                            <textarea class="form-control" name="incident_notify_detail" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">การช่วยเหลือหลังเกิดเหตุ (Timeline)</label>
+                            <textarea class="form-control" name="accident_timeline" rows="3" placeholder="ระบุเวลาและการช่วยเหลือ..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: VEHICLE -->
+            <div id="step2" class="form-section">
+                <div class="section-title"><span class="section-badge">2</span> ส่วนที่ 2: ยานพาหนะ (Vehicles)</div>
+                <div class="section-card">
+                    <div class="section-header">ข้อมูลยานพาหนะ (เพิ่มได้ 3 คัน)</div>
+                    <div class="card-body-custom">
+                        <ul class="nav nav-tabs mb-3" id="vehicleTabs" role="tablist">
+                            <li class="nav-item" role="presentation"><button class="nav-link active" id="veh1-tab" data-bs-toggle="tab" data-bs-target="#veh1" type="button" role="tab">คันที่ 1 (หลัก)</button></li>
+                            <li class="nav-item" role="presentation"><button class="nav-link" id="veh2-tab" data-bs-toggle="tab" data-bs-target="#veh2" type="button" role="tab">คันที่ 2</button></li>
+                            <li class="nav-item" role="presentation"><button class="nav-link" id="veh3-tab" data-bs-toggle="tab" data-bs-target="#veh3" type="button" role="tab">คันที่ 3</button></li>
+                        </ul>
+                        <div class="tab-content" id="vehicleTabsContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: ROAD & ENV -->
+            <div id="step3" class="form-section">
+                <div class="section-title"><span class="section-badge">3</span> ส่วนที่ 3: ถนนและสิ่งแวดล้อม</div>
+                <div class="section-card">
+                    <div class="section-header">ลักษณะทางกายภาพ</div>
+                    <div class="card-body-custom">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label class="form-label">ประเภทถนน</label><input type="text" class="form-control" name="road_type"></div>
+                            <div class="col-md-6"><label class="form-label">หมายเลขถนน</label><input type="text" class="form-control" name="road_number"></div>
+                            
+                            <!-- UPDATED: Road Characteristics (Select) -->
+                            <div class="col-md-6">
+                                <label class="form-label">ลักษณะทางบริเวณจุดเกิดเหตุ</label>
+                                <select class="form-select" name="road_characteristics">
+                                    <option value="">-เลือก-</option>
+                                    <option value="1">ทางตรง</option><option value="2">ทางโค้ง</option><option value="3">ทางแยก</option>
+                                    <option value="4">ทางคนข้าม (ทางม้าลาย)</option><option value="5">ทางร่วม</option><option value="6">จุดกลับรถ</option>
+                                    <option value="7">ทางบนสะพาน</option><option value="8">ทางเอียง/ลาดชันขึ้น</option><option value="9">ทางเอียง/ลาดชันลง</option>
+                                    <option value="10">ชนกันบนไหล่เขา</option><option value="11">อื่นๆ</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3"><label class="form-label">จำนวนเลน</label><input type="number" class="form-control" name="total_lanes"></div>
+                            <div class="col-md-3"><label class="form-label">การแบ่งช่อง</label><input type="text" class="form-control" name="lane_division"></div>
+
+                            <!-- UPDATED: Traffic Details -->
+                            <div class="col-md-4">
+                                <label class="form-label">สัญญาณไฟจราจร</label>
+                                <select class="form-select" name="traffic_light">
+                                    <option value="ไม่มี">ไม่มี</option><option value="มี">มี</option><option value="ไฟกระพริบ">ไฟกระพริบ</option><option value="อื่นๆ">อื่นๆ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ทิศทางการเดินรถ</label>
+                                <select class="form-select" name="traffic_direction">
+                                    <option value="">-เลือก-</option><option value="1">ทางเดียว (One way)</option><option value="2">สองทาง</option><option value="3">มีการปิดช่องทาง</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">เครื่องหมายจราจรบนผิวทาง</label>
+                                <select class="form-select" name="road_markings">
+                                    <option value="1">ไม่มี</option><option value="2">ชัดเจนสภาพดี</option><option value="3">เลือนราง/ชำรุด</option><option value="4">อื่นๆ</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">ผิวจราจร</label>
+                                <select class="form-select" name="traffic_surface">
+                                    <option value="แห้ง">แห้งปกติ</option><option value="เปียก">เปียก/ลื่น</option><option value="เป็นคลื่น/หลุมบ่อ">เป็นคลื่น/หลุมบ่อ</option><option value="อื่นๆ">อื่นๆ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">ทัศนวิสัย/สภาพอากาศ</label>
+                                <select class="form-select" name="weather_visibility">
+                                    <option value="1">มีแสงสว่างเพียงพอ</option><option value="2">มืด</option><option value="3">ฝนตก</option><option value="4">อื่นๆ</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-12"><label class="form-label">หมายเหตุถนน/สิ่งแวดล้อม</label><textarea class="form-control" name="road_env_remark" rows="2"></textarea></div>
+
+                            <!-- UPDATED: Promoting/Preventing Factors with Checkboxes -->
+                            <div class="col-md-6 border-end">
+                                <label class="fw-bold text-danger">สิ่งแวดล้อมที่ส่งเสริมความรุนแรง (Enhancing)</label>
+                                <div class="card p-2 mb-2 bg-light border-0">
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="env_enhance_shop"><label>ร้านค้า/แผงลอยข้างทาง</label></div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="env_enhance_canal"><label>คู/คลอง/แม่น้ำ ลึกชัน</label></div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="env_enhance_object"><label>วัสดุสิ่งของหล่น</label></div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="env_enhance_other_check"><label>อื่นๆ</label></div>
+                                </div>
+                                <textarea class="form-control" name="promoting_factor" rows="2" placeholder="ระบุเพิ่มเติม..."></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="fw-bold text-success">สิ่งแวดล้อมที่ช่วยลดความรุนแรง (Preventing)</label>
+                                <div class="card p-2 mb-2 bg-light border-0">
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="env_prevent_rail"><label>Guard rail</label></div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="env_prevent_barrier"><label>แบริเออร์</label></div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="env_prevent_cushion"><label>วัสดุรับแรงกระแทก</label></div>
+                                    <div class="form-check"><input class="form-check-input" type="checkbox" name="env_prevent_other_check"><label>อื่นๆ</label></div>
+                                </div>
+                                <textarea class="form-control" name="preventing_factor" rows="2" placeholder="ระบุเพิ่มเติม..."></textarea>
+                            </div>
+
+                            <div class="col-12 mt-2">
+                                <label class="fw-bold">ข้อเสนอแนะแนวทางการป้องกันและแก้ไขปัญหา (ถนน/สิ่งแวดล้อม)</label>
+                                <textarea class="form-control" name="suggestion_prevention_road" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: PERSON -->
+            <div id="step4" class="form-section">
+                <div class="section-title"><span class="section-badge">4</span> ส่วนที่ 4: ผู้ขับขี่และผู้โดยสาร</div>
+                
+                <!-- Driver -->
+                <div class="section-card border-primary border-2">
+                    <div class="section-header bg-primary text-white">ข้อมูลผู้ขับขี่ (Driver)</div>
+                    <div class="card-body-custom">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label class="form-label">ชื่อ-นามสกุล</label><input type="text" class="form-control" name="driver_name"></div>
+                            <div class="col-md-6"><label class="form-label">รหัสบัตรประชาชน</label><input type="text" class="form-control" name="driver_cid"></div>
+                            <div class="col-md-4"><label class="form-label">เพศ</label><select class="form-select" name="driver_gender"><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select></div>
+                            <div class="col-md-4"><label class="form-label">อายุ</label><input type="number" class="form-control" name="driver_age"></div>
+                            <div class="col-md-4"><label class="form-label">อาชีพ</label><input type="text" class="form-control" name="driver_job"></div>
+
+                            <div class="col-md-4"><label class="form-label">สถานะการบาดเจ็บ</label><select class="form-select" name="driver_status"><option value="ไม่บาดเจ็บ">ไม่บาดเจ็บ</option><option value="บาดเจ็บ">บาดเจ็บ</option><option value="เสียชีวิต">เสียชีวิต</option></select></div>
+                            <div class="col-md-4"><label class="form-label">การนำส่ง</label><input type="text" class="form-control" name="driver_transport_by"></div>
+                            <div class="col-md-4"><label class="form-label">โรคประจำตัว</label><input type="text" class="form-control" name="driver_disease"></div>
+                            
+                            <div class="col-md-4"><label class="form-label">ใบขับขี่</label><select class="form-select" name="driver_license"><option value="มี">มี</option><option value="ไม่มี">ไม่มี</option></select></div>
+                            <div class="col-md-4"><label class="form-label">ประสบการณ์ (ปี)</label><input type="number" class="form-control" name="driving_experience"></div>
+                            <div class="col-md-4"><label class="form-label">ความชำนาญ</label><select class="form-select" name="driving_skill"><option value="ชำนาญ">ชำนาญ</option><option value="ไม่ชำนาญ">ไม่ชำนาญ</option></select></div>
+                            
+                            <!-- UPDATED: Driver Details -->
+                            <div class="col-md-6">
+                                <label class="fw-bold small">ความคุ้นเคยกับเส้นทาง</label>
+                                <select class="form-select form-select-sm" name="driver_familiarity_detail">
+                                    <option value="">-เลือก-</option>
+                                    <option value="1">คนในพื้นที่ (ตำบล/แขวง)</option>
+                                    <option value="2">คนนอกพื้นที่ (ในจังหวัด)</option>
+                                    <option value="3">คนนอกเขตจังหวัด</option>
+                                    <option value="4">ต่างชาติ</option>
+                                    <option value="5">ไม่ทราบ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6"><label class="small fw-bold">จุดประสงค์การเดินทาง</label><input type="text" class="form-control form-control-sm" name="driver_travel_purpose"></div>
+                            
+                            <div class="col-md-6">
+                                <label class="small fw-bold">จุดที่ทำให้เสียชีวิต (ณ ที่เกิดเหตุ)</label>
+                                <select class="form-select form-select-sm" name="driver_death_point_scene">
+                                    <option value="">-เลือก-</option><option value="1">จุดเดียวกับที่ชน</option><option value="2">จุดอื่น (ระบุในรายละเอียด)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="small fw-bold">เข็มขัดนิรภัย</label>
+                                <select class="form-select form-select-sm" name="driver_seatbelt_usage">
+                                    <option value="">-เลือก-</option><option value="1">ใช้</option><option value="2">ไม่ใช้</option><option value="3">ไม่ทราบ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="small fw-bold">หมวกนิรภัย</label>
+                                <select class="form-select form-select-sm" name="driver_helmet_usage">
+                                    <option value="">-เลือก-</option><option value="1">สวม (รัดคาง)</option><option value="2">สวม (ไม่รัดคาง)</option><option value="3">ไม่สวม</option><option value="4">ไม่ทราบ</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4"><label class="small fw-bold">ความเร็วขณะเกิดเหตุ</label><select class="form-select form-select-sm" name="speed_estimate"><option value="">-</option><option value="เร็ว">เร็ว</option><option value="ไม่เร็ว">ไม่เร็ว</option><option value="ไม่ทราบ">ไม่ทราบ</option></select></div>
+                            <div class="col-md-4"><label class="small fw-bold">ความเร็วเฉลี่ย (กม./ชม.)</label><input type="number" class="form-control form-control-sm" name="speed_avg"></div>
+
+                            <!-- UPDATED RISK BEHAVIOR TABLE -->
+                            <div class="col-12 mt-3">
+                                <label class="fw-bold text-danger mb-2">พฤติกรรมเสี่ยงผู้ขับขี่ (Driver Risk Behaviors)</label>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm risk-table">
+                                        <thead class="table-light text-center">
+                                            <tr><th style="width: 35%;">พฤติกรรม</th><th style="width: 10%;">ใช่</th><th style="width: 10%;">ไม่ใช่</th><th style="width: 10%;">ไม่ทราบ</th><th>รายละเอียด</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td>ดื่มแอลกอฮอล์</td><td class="text-center"><input type="radio" name="risk_d_alc" value="1"></td><td class="text-center"><input type="radio" name="risk_d_alc" value="0"></td><td class="text-center"><input type="radio" name="risk_d_alc" value="9" checked></td><td><input type="text" class="form-control form-control-sm" name="risk_d_alc_detail"></td></tr>
+                                            <tr><td>ขับรถเร็วเกินกำหนด</td><td class="text-center"><input type="radio" name="risk_d_speed" value="1"></td><td class="text-center"><input type="radio" name="risk_d_speed" value="0"></td><td class="text-center"><input type="radio" name="risk_d_speed" value="9" checked></td><td></td></tr>
+                                            <tr><td>ง่วงนอน/หลับใน</td><td class="text-center"><input type="radio" name="risk_d_sleep" value="1"></td><td class="text-center"><input type="radio" name="risk_d_sleep" value="0"></td><td class="text-center"><input type="radio" name="risk_d_sleep" value="9" checked></td><td></td></tr>
+                                            <tr><td>ใช้โทรศัพท์ขณะขับขี่</td><td class="text-center"><input type="radio" name="risk_d_phone" value="1"></td><td class="text-center"><input type="radio" name="risk_d_phone" value="0"></td><td class="text-center"><input type="radio" name="risk_d_phone" value="9" checked></td><td></td></tr>
+                                            <tr><td>ฝ่าฝืนสัญญาณ/เครื่องหมาย</td><td class="text-center"><input type="radio" name="risk_d_violation" value="1"></td><td class="text-center"><input type="radio" name="risk_d_violation" value="0"></td><td class="text-center"><input type="radio" name="risk_d_violation" value="9" checked></td><td></td></tr>
+                                            <tr><td>บรรทุกเกินกฎหมายกำหนด</td><td class="text-center"><input type="radio" name="risk_d_overload" value="1"></td><td class="text-center"><input type="radio" name="risk_d_overload" value="0"></td><td class="text-center"><input type="radio" name="risk_d_overload" value="9" checked></td><td></td></tr>
+                                            <tr><td>แซงรถผิดกฎหมาย</td><td class="text-center"><input type="radio" name="risk_d_overtake" value="1"></td><td class="text-center"><input type="radio" name="risk_d_overtake" value="0"></td><td class="text-center"><input type="radio" name="risk_d_overtake" value="9" checked></td><td></td></tr>
+                                            <tr><td>ชนสิ่งกีดขวางข้างทาง</td><td class="text-center"><input type="radio" name="risk_d_crash_obj" value="1"></td><td class="text-center"><input type="radio" name="risk_d_crash_obj" value="0"></td><td class="text-center"><input type="radio" name="risk_d_crash_obj" value="9" checked></td><td></td></tr>
+                                            <tr><td>อุปกรณ์ไม่ปลอดภัย (No Car Seat)</td><td class="text-center"><input type="radio" name="risk_d_unsafe_eq" value="1"></td><td class="text-center"><input type="radio" name="risk_d_unsafe_eq" value="0"></td><td class="text-center"><input type="radio" name="risk_d_unsafe_eq" value="9" checked></td><td></td></tr>
+                                            <tr><td>รับประทานยา</td><td class="text-center"><input type="radio" name="risk_d_med" value="1"></td><td class="text-center"><input type="radio" name="risk_d_med" value="0"></td><td class="text-center"><input type="radio" name="risk_d_med" value="9" checked></td><td></td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 mt-3">
+                                <label class="fw-bold">กลไกการบาดเจ็บ</label>
+                                <div class="row">
+                                    <div class="col-md-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="ejected_from_vehicle" value="1"><label>หลุดออกจากตัวรถ</label></div></div>
+                                    <div class="col-md-12"><input type="text" class="form-control mt-1" name="driver_condition_post_crash" placeholder="อาการหลังเกิดเหตุ..."></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Passengers (Independent Tabs) -->
+                <div class="section-card">
+                    <div class="section-header bg-warning text-dark">ผู้โดยสาร/คนเดินเท้า (Passengers/Pedestrians)</div>
+                    <div class="card-body-custom">
+                        <ul class="nav nav-tabs mb-3" id="passengerTabs">
+                            <!-- JS Generated -->
+                        </ul>
+                        <div class="tab-content" id="passengerTabsContent">
+                            <!-- JS Generated -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 5: COUNTERPARTY (NEW) -->
+            <div id="step5" class="form-section">
+                <div class="section-title"><span class="section-badge">5</span> ส่วนที่ 5: ข้อมูลคู่กรณี (Counterparty)</div>
+                <div class="alert alert-info">ส่วนนี้สำหรับบันทึกข้อมูลของคู่กรณี (ถ้ามี)</div>
+                <div class="section-card border-secondary border-2">
+                    <div class="section-header bg-secondary text-white">ข้อมูลคู่กรณี (Party)</div>
+                    <div class="card-body-custom">
+                        <ul class="nav nav-tabs mb-3" id="partyTabs"></ul>
+                        <div class="tab-content" id="partyTabsContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 6: ANALYSIS -->
+            <div id="step6" class="form-section">
+                <div class="section-title"><span class="section-badge">6</span> ส่วนที่ 6: วิเคราะห์ (Haddon & Summary) และรูปภาพ</div>
+                
+                <!-- Haddon Matrix -->
+                <div class="section-card">
+                    <div class="section-header d-flex justify-content-between align-items-center">
+                        <span>Haddon's Matrix</span>
+                        <button type="button" class="btn-ai" onclick="openAIModal('haddon')">🤖 AI ช่วยร่าง Haddon</button>
+                    </div>
+                    <div class="card-body-custom">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-light text-center"><tr><th>ปัจจัย</th><th>ก่อนชน</th><th>ขณะชน</th><th>หลังชน</th></tr></thead>
+                            <tbody>
+                                <tr><td class="bg-light fw-bold">คน</td><td><textarea class="form-control form-control-sm" name="haddon_human_pre"></textarea></td><td><textarea class="form-control form-control-sm" name="haddon_human_crash"></textarea></td><td><textarea class="form-control form-control-sm" name="haddon_human_post"></textarea></td></tr>
+                                <tr><td class="bg-light fw-bold">รถ</td><td><textarea class="form-control form-control-sm" name="haddon_vehicle_pre"></textarea></td><td><textarea class="form-control form-control-sm" name="haddon_vehicle_crash"></textarea></td><td><textarea class="form-control form-control-sm" name="haddon_vehicle_post"></textarea></td></tr>
+                                <tr><td class="bg-light fw-bold">สิ่งแวดล้อม</td><td><textarea class="form-control form-control-sm" name="haddon_env_pre"></textarea></td><td><textarea class="form-control form-control-sm" name="haddon_env_crash"></textarea></td><td><textarea class="form-control form-control-sm" name="haddon_env_post"></textarea></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Summary & Suggestions -->
+                <div class="section-card">
+                    <div class="section-header d-flex justify-content-between align-items-center">
+                        <span>สรุปและข้อเสนอแนะ</span>
+                        <button type="button" class="btn-ai" onclick="openAIModal('summary')">🤖 AI ช่วยร่างสรุป</button>
+                    </div>
+                    <div class="card-body-custom">
+                        <div class="mb-3">
+                            <label class="fw-bold">สรุปปัจจัยที่นำไปสู่การเกิดเหตุ</label>
+                            <textarea class="form-control" name="summary_factors" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">สิ่งที่ได้ดำเนินการไปแล้ว</label>
+                            <textarea class="form-control" name="actions_taken" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold">ข้อเสนอแนะ/แนวทางป้องกัน</label>
+                            <textarea class="form-control" name="suggestions" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MOVED: 10 Images Grid Moved Here (Before Step 7) -->
+                <div class="section-card mt-4">
+                    <div class="section-header bg-warning text-dark"><i class="fas fa-camera me-2"></i> ภาพจำลองเหตุการณ์/ความเสียหาย (10 รูป)</div>
+                    <div class="card-body-custom">
+                        <div class="row g-3">
+                            <div class="col-12 mb-2">
+                                <label class="form-label fw-bold">ภาพจำลองเหตุการณ์ (Crash Diagram)</label>
+                                <input type="file" class="form-control" name="img_crash_diagram" accept="image/*" onchange="previewImage(this, 'preview_crash')">
+                                <div id="preview_crash" class="preview-box mt-2"></div>
+                            </div>
+                            <div class="col-12"><hr></div>
+                            <script>
+                                for(let i=1; i<=10; i++) {
+                                    document.write(`
+                                    <div class="col-md-6 col-lg-4">
+                                        <div class="img-upload-slot">
+                                            <label class="fw-bold mb-1 badge bg-secondary">รูปที่ ${i}</label>
+                                            <input type="file" name="img_file_${i}" class="form-control form-control-sm mb-2" accept="image/*" onchange="previewImage(this, 'preview_${i}')">
+                                            <textarea name="img_desc_${i}" class="form-control form-control-sm" rows="1" placeholder="คำอธิบาย..."></textarea>
+                                            <div id="preview_${i}" class="preview-box"></div>
+                                        </div>
+                                    </div>`);
+                                }
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 7: RECORDER -->
+            <div id="step7" class="form-section">
+                <div class="section-title"><span class="section-badge">7</span> ส่วนที่ 7: ข้อมูลผู้บันทึกและทีมสอบสวน</div>
+                <div class="section-card">
+                    <div class="card-body-custom">
+                        <div class="row g-3">
+                            <div class="col-md-4"><label class="form-label fw-bold">ผู้บันทึก (ชื่อ-สกุล)</label><input type="text" class="form-control" name="recorder_name"></div>
+                            <div class="col-md-4"><label class="form-label">เบอร์มือถือ</label><input type="text" class="form-control" name="recorder_phone"></div>
+                            <div class="col-md-4"><label class="form-label">อีเมล</label><input type="email" class="form-control" name="recorder_email"></div>
+                            <div class="col-md-6"><label class="form-label">หน่วยงาน</label><input type="text" class="form-control" name="recorder_org"></div>
+                            <div class="col-md-6"><label class="form-label">สถานะการสอบสวน</label><select class="form-select" name="investigation_status"><option value="อยู่ระหว่างดำเนินการ">อยู่ระหว่างดำเนินการ</option><option value="เสร็จสิ้น">เสร็จสิ้น</option></select></div>
+                            
+                            <!-- MOVED: Investigation Team Data from Step 1 to here -->
+                            <div class="col-12 mt-3 p-3 bg-light rounded border border-primary">
+                                <label class="fw-bold text-primary"><i class="fas fa-users-cog me-2"></i>ทีมสอบสวนโรค (Investigation Team)</label>
+                                <div class="row g-2 mb-2 mt-1">
+                                    <div class="col-auto"><div class="form-check"><input class="form-check-input" type="checkbox" name="team_type_1" value="JIT"><label>JIT</label></div></div>
+                                    <div class="col-auto"><div class="form-check"><input class="form-check-input" type="checkbox" name="team_type_2" value="SAT"><label>SAT</label></div></div>
+                                    <div class="col-auto"><div class="form-check"><input class="form-check-input" type="checkbox" name="team_type_3" value="SRRT"><label>SRRT</label></div></div>
+                                    <div class="col-auto"><div class="form-check"><input class="form-check-input" type="checkbox" name="team_type_4" value="CDCU"><label>CDCU</label></div></div>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-6"><input type="text" class="form-control form-control-sm" name="investigation_leader" placeholder="ผู้ควบคุมทีมสอบสวน"></div>
+                                    <div class="col-md-6"><input type="text" class="form-control form-control-sm" name="investigation_team" placeholder="รายชื่อทีมสอบสวน"></div>
+                                    <!-- Moved Dates Here -->
+                                    <div class="col-md-3"><label class="small fw-bold">วันเริ่มสอบสวน</label><input type="date" class="form-control form-control-sm" name="investigation_start_date"></div>
+                                    <div class="col-md-3"><label class="small fw-bold">วันสิ้นสุด</label><input type="date" class="form-control form-control-sm" name="investigation_end_date"></div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 mt-3 pt-3 border-top">
+                                <label class="fw-bold mb-2 text-primary">ผู้สอบสวนอุบัติเหตุเพิ่มเติม (5 ท่าน)</label>
+                                <div class="row g-2">
+                                    <div class="col-md-4"><input type="text" class="form-control form-control-sm" name="additional_investigator_1" placeholder="ชื่อ-สกุล (1)"></div>
+                                    <div class="col-md-4"><input type="text" class="form-control form-control-sm" name="additional_investigator_2" placeholder="ชื่อ-สกุล (2)"></div>
+                                    <div class="col-md-4"><input type="text" class="form-control form-control-sm" name="additional_investigator_3" placeholder="ชื่อ-สกุล (3)"></div>
+                                    <div class="col-md-6"><input type="text" class="form-control form-control-sm" name="additional_investigator_4" placeholder="ชื่อ-สกุล (4)"></div>
+                                    <div class="col-md-6"><input type="text" class="form-control form-control-sm" name="additional_investigator_5" placeholder="ชื่อ-สกุล (5)"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 mt-3 border-top pt-3">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="fw-bold small">ตำรวจเจ้าของคดี</label>
+                                        <input type="text" class="form-control form-control-sm" name="police_name">
+                                        <input type="text" class="form-control form-control-sm mt-1" name="police_phone" placeholder="เบอร์โทร">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="fw-bold small">ผู้ให้ข้อมูล</label>
+                                        <input type="text" class="form-control form-control-sm" name="informant_name">
+                                        <input type="text" class="form-control form-control-sm mt-1" name="informant_phone" placeholder="เบอร์โทร">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">เอกสารแนบ</label><input type="file" class="form-control" name="attachment_files" multiple>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="action-bar">
+                <button type="button" class="btn btn-outline-dark rounded-pill px-4 no-print me-2" onclick="printReport()"><i class="fas fa-print me-2"></i>พิมพ์รายงาน</button>
+                <button type="submit" class="btn btn-danger btn-lg rounded-pill px-5 shadow"><i class="fas fa-save me-2"></i>บันทึกข้อมูล</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+
+    <script>
+        const API_URL_READ = "https://script.google.com/macros/s/AKfycbwjztxJHHcDIZVWny9lm8zo_IXNY0q078_6AEK4pNhoLJnkuQUARihllqVj-1bavgleAA/exec";
+        const API_URL_SAVE = "https://script.google.com/macros/s/AKfycbwjztxJHHcDIZVWny9lm8zo_IXNY0q078_6AEK4pNhoLJnkuQUARihllqVj-1bavgleAA/exec";
+        const GOOGLE_MAP_KEY = "AIzaSyA1xmTQ_hd4n-FPyqIiUqPhAElgMRdYfUo";
+        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTepdvVr3gMQnGXZRvruvRAK0vVynQ5DqGf2gc5NX7pONU2p9YtyW-fkgbgOyjdzkt2rNnKWdae8Svl/pub?output=csv";
+
+        let currentUser = null;
+        let formMap, formMarker;
+
+        // --- Search State ---
+        let allCsvDeadData = [];
+        let allRtiReports  = [];
+        let searchAllRows  = [];
+        let searchDataLoaded = false;
+
+        // Auto Calculate Outcomes
+        function calculateOutcomes() {
+            const getVal = (name) => parseInt(document.querySelector(`[name="${name}"]`).value) || 0;
+            
+            const injured = getVal('injure_no_hospital') + getVal('injure_opd') + getVal('injure_ipd');
+            document.querySelector(`[name="total_injured"]`).value = injured;
+            
+            const dead = getVal('dead_scene') + getVal('dead_transit') + getVal('dead_er') + getVal('dead_ward') + getVal('dead_refer_out');
+            document.querySelector(`[name="total_dead"]`).value = dead;
+            
+            document.querySelector(`[name="total_affected"]`).value = injured + dead;
+        }
+
+        function previewImage(input, id) {
+            const box = document.getElementById(id); box.innerHTML = '';
+            if(input.files[0]) {
+                const r = new FileReader();
+                r.onload = e => { box.innerHTML = `<img src="${e.target.result}">`; };
+                r.readAsDataURL(input.files[0]);
+            }
+        }
+
+        window.onload = async function() {
+            const saved = localStorage.getItem('selaphum_user');
+            if(saved) currentUser = JSON.parse(saved);
+            else new bootstrap.Modal(document.getElementById('loginModal')).show();
+
+            generateVehicleTabs();
+            generatePassengerTabs();
+            generatePartyTabs();
+            loadMap();
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+            const prefill = urlParams.get('prefill');
+            
+            if(id) loadReport(id);
+            else if(prefill) populateFromLocal();
+            else if(currentUser) {
+                 if(document.querySelector('[name="recorder_name"]')) document.querySelector('[name="recorder_name"]').value = currentUser.name;
+                 if(document.querySelector('[name="recorder_org"]')) document.querySelector('[name="recorder_org"]').value = currentUser.hospital_code;
+            }
+        };
+
+        // --- 3 Vehicles Tabs Generator (UPDATED: Added fields) ---
+        function generateVehicleTabs() {
+            const content = document.getElementById('vehicleTabsContent');
+            let htmlContent = '';
+            for(let i=1; i<=3; i++) {
+                const prefix = i === 1 ? '' : `v${i}_`; 
+                const activeClass = i === 1 ? 'show active' : '';
+                
+                htmlContent += `
+                <div class="tab-pane fade ${activeClass}" id="veh${i}" role="tabpanel">
+                    <div class="row g-3">
+                        <div class="col-md-4"><label class="form-label">ยี่ห้อ</label><input type="text" class="form-control" name="${prefix}vehicle_brand"></div>
+                        <div class="col-md-4"><label class="form-label">รุ่น</label><input type="text" class="form-control" name="${prefix}vehicle_model"></div>
+                        <div class="col-md-4"><label class="form-label">ทะเบียน</label><input type="text" class="form-control" name="${prefix}vehicle_license_plate"></div>
+                        <div class="col-md-4"><label class="form-label">ขนาดเครื่อง (CC)</label><input type="text" class="form-control" name="${prefix}vehicle_cc"></div>
+                        <div class="col-md-4"><label class="form-label">วันตรวจสภาพ</label><input type="date" class="form-control" name="${prefix}vehicle_inspection_date"></div>
+                        <div class="col-md-4"><label class="form-label">อายุรถ (ปี)</label><input type="number" class="form-control" name="${prefix}vehicle_age_years"></div>
+                        
+                        <div class="col-md-6">
+                            <label class="fw-bold">ประเภทการใช้งาน</label>
+                            <select class="form-select" name="${prefix}vehicle_usage_type">
+                                <option value="">-เลือก-</option><option value="ส่วนบุคคล">ส่วนบุคคล</option><option value="รับจ้าง">รับจ้าง</option><option value="ราชการ">ราชการ</option><option value="รับส่งนักเรียน">รับส่งนักเรียน</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold">ประเภทยานพาหนะ</label>
+                            <select class="form-select" name="${prefix}vehicle_type_detail">
+                                <option value="จักรยานยนต์">จักรยานยนต์</option><option value="รถเก๋ง">รถเก๋ง</option><option value="ปิคอัพ">ปิคอัพ</option><option value="รถตู้">รถตู้</option><option value="รถบรรทุก">รถบรรทุก</option><option value="รถโดยสาร">รถโดยสาร</option><option value="รถพยาบาล">รถพยาบาล</option><option value="อื่นๆ">อื่นๆ</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12"><hr></div>
+                        <!-- UPDATED: Insurance, Tires, Brake -->
+                        <div class="col-md-4">
+                            <label class="small fw-bold">ประกันภัย</label>
+                            <select class="form-select form-select-sm" name="${prefix}veh_insurance_class">
+                                <option value="">-เลือก-</option><option value="ไม่มี">ไม่มี</option><option value="ชั้น 1">ชั้น 1</option><option value="ชั้น 2">ชั้น 2</option><option value="ชั้น 3">ชั้น 3</option><option value="ไม่ทราบ">ไม่ทราบ</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold">สภาพยาง</label>
+                            <select class="form-select form-select-sm" name="${prefix}veh_tire_condition">
+                                <option value="">-เลือก-</option><option value="1">ปกติ</option><option value="2">ล้อ/ยางชำรุด</option><option value="3">ยางหมดอายุ</option><option value="4">ยางลมอ่อน</option><option value="5">อื่นๆ</option><option value="6">ไม่ทราบ</option>
+                            </select>
+                        </div>
+                         <div class="col-md-4">
+                            <label class="small fw-bold">ระบบเบรก</label>
+                            <select class="form-select form-select-sm" name="${prefix}veh_brake_condition">
+                                <option value="">-เลือก-</option><option value="1">ปกติ</option><option value="2">เบรกไม่อยู่</option><option value="3">ผ้าเบรกหมด</option><option value="4">น้ำมันเบรกรั่ว</option><option value="5">อื่นๆ</option><option value="6">ไม่ทราบ</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-3 mt-2"><label class="small fw-bold">ดัดแปลง</label><select class="form-select form-select-sm" name="${prefix}veh_modify"><option value="ไม่มี">ไม่มี</option><option value="มี">มี</option></select></div>
+                        <div class="col-md-3 mt-2"><label class="small fw-bold">GPS</label><select class="form-select form-select-sm" name="${prefix}veh_gps"><option value="ไม่มี">ไม่มี</option><option value="มี">มี</option></select></div>
+                        <div class="col-md-3 mt-2"><label class="small fw-bold">กล้องหน้ารถ</label><select class="form-select form-select-sm" name="${prefix}veh_dashcam"><option value="ไม่มี">ไม่มี</option><option value="มี">มี</option></select></div>
+                        <div class="col-md-3 mt-2"><label class="small fw-bold">ไฟไหม้</label><select class="form-select form-select-sm" name="${prefix}veh_fire"><option value="ไม่มี">ไม่มี</option><option value="มี">มี</option></select></div>
+                        <div class="col-md-3 mt-2"><label class="small fw-bold">ติดแก๊ส</label><select class="form-select form-select-sm" name="${prefix}veh_gas"><option value="ไม่ติด">ไม่ติด</option><option value="LPG">LPG</option><option value="NGV">NGV</option></select></div>
+                        <div class="col-md-3 mt-2"><label class="small fw-bold">ถุงลม</label><select class="form-select form-select-sm" name="${prefix}veh_airbag"><option value="ไม่มี">ไม่มี</option><option value="ทำงาน">ทำงาน</option><option value="ไม่ทำงาน">ไม่ทำงาน</option></select></div>
+                        <div class="col-md-3 mt-2"><label class="small fw-bold">เข็มขัด</label><select class="form-select form-select-sm" name="${prefix}veh_seatbelt"><option value="พร้อม">พร้อม</option><option value="ไม่พร้อม">ไม่พร้อม</option></select></div>
+
+                        <!-- ADDED: Additional Details Field -->
+                        <div class="col-12 mt-2">
+                             <label class="form-label fw-bold">รายละเอียดเพิ่มเติม (ยานพาหนะ)</label>
+                             <textarea class="form-control" name="${prefix}vehicle_more_detail" rows="2" placeholder="ระบุรายละเอียดเพิ่มเติมเกี่ยวกับรถคันนี้..."></textarea>
+                        </div>
+                    </div>
+                </div>`;
+            }
+            content.innerHTML = htmlContent;
+        }
+
+        // --- Passenger Tabs (UPDATED: Added Risk Table & Detailed Info) ---
+        function generatePassengerTabs() {
+            const ul = document.getElementById('passengerTabs');
+            const content = document.getElementById('passengerTabsContent');
+            let htmlTabs = '', htmlContent = '';
+            
+            for(let i=1; i<=5; i++) {
+                htmlTabs += `<li class="nav-item"><button class="nav-link ${i===1?'active':''}" data-bs-toggle="tab" data-bs-target="#pass${i}" type="button">ผู้โดยสาร ${i}</button></li>`;
+                htmlContent += `
+                <div class="tab-pane fade ${i===1?'show active':''}" id="pass${i}">
+                    <div class="row g-2">
+                        <div class="col-md-3"><label class="small fw-bold">ประเภท</label><select class="form-select form-select-sm" name="p${i}_type"><option value="ผู้โดยสาร">ผู้โดยสาร</option><option value="คนเดินเท้า">คนเดินเท้า</option></select></div>
+                        <div class="col-md-3"><label class="small fw-bold">สัญชาติ</label><select class="form-select form-select-sm" name="p${i}_nationality"><option value="ไทย">ไทย</option><option value="อื่นๆ">อื่นๆ</option></select></div>
+                        <div class="col-md-3"><label class="small fw-bold">อาชีพ</label><input type="text" class="form-control form-control-sm" name="p${i}_occupation"></div>
+                        <div class="col-md-3"><label class="small fw-bold">ทะเบียนรถ</label><input type="text" class="form-control form-control-sm" name="p${i}_veh_plate"></div>
+
+                        <div class="col-md-4"><label class="small fw-bold">ชื่อ-นามสกุล</label><input type="text" class="form-control form-control-sm" name="p${i}_name"></div>
+                        <div class="col-md-2"><label class="small fw-bold">อายุ</label><input type="number" class="form-control form-control-sm" name="p${i}_age"></div>
+                        <div class="col-md-3"><label class="small fw-bold">ตำแหน่งนั่ง</label><input type="text" class="form-control form-control-sm" name="p${i}_position" placeholder="เช่น เบาะหน้าซ้าย"></div>
+                        <div class="col-md-3"><label class="small fw-bold">วัตถุประสงค์เดินทาง</label><input type="text" class="form-control form-control-sm" name="p${i}_travel_purpose"></div>
+                        
+                        <div class="col-md-6"><label class="small fw-bold">โรคประจำตัว</label><input type="text" class="form-control form-control-sm" name="p${i}_disease" placeholder="เบาหวาน/ความดัน/หัวใจ/ลมชัก/อื่นๆ"></div>
+                        <div class="col-md-6"><label class="small fw-bold">การนำส่ง รพ.</label><input type="text" class="form-control form-control-sm" name="p${i}_transport_by"></div>
+
+                        <div class="col-md-4"><label class="small fw-bold">สถานะ</label><select class="form-select form-select-sm" name="p${i}_status"><option value="ไม่เจ็บ">ไม่เจ็บ</option><option value="เจ็บเล็กน้อย">เจ็บเล็กน้อย</option><option value="สาหัส">สาหัส</option><option value="เสียชีวิต">เสียชีวิต</option></select></div>
+                        <div class="col-md-4"><label class="small fw-bold">สถานที่เสียชีวิต</label><select class="form-select form-select-sm" name="p${i}_death_location"><option value="">-</option><option value="จุดเกิดเหตุ">จุดเกิดเหตุ</option><option value="ระหว่างนำส่ง">ระหว่างนำส่ง</option><option value="รพ.">รพ.</option><option value="อื่นๆ">อื่นๆ</option></select></div>
+                        <div class="col-md-4"><label class="small fw-bold">จุดเสียชีวิต (ที่เกิดเหตุ)</label><select class="form-select form-select-sm" name="p${i}_death_point_scene"><option value="">-</option><option value="จุดชน">จุดเดียวกับที่ชน</option><option value="กระเด็น">กระเด็นไปจุดอื่น</option></select></div>
+                        
+                        <div class="col-12 mt-2"><label class="small fw-bold text-danger">พฤติกรรมเสี่ยงผู้โดยสาร (Passenger Risk)</label>
+                             <div class="table-responsive">
+                                <table class="table table-bordered table-sm risk-table" style="font-size: 0.8rem;">
+                                    <thead class="table-light text-center"><tr><th>พฤติกรรม</th><th>ใช่</th><th>ไม่ใช่</th><th>ไม่ทราบ</th></tr></thead>
+                                    <tbody>
+                                        <tr><td>ดื่มแอลกอฮอล์</td><td class="text-center"><input type="radio" name="p${i}_risk_alc" value="1"></td><td class="text-center"><input type="radio" name="p${i}_risk_alc" value="0"></td><td class="text-center"><input type="radio" name="p${i}_risk_alc" value="9" checked></td></tr>
+                                        <tr><td>หลุดออกจากตัวรถ</td><td class="text-center"><input type="radio" name="p${i}_risk_ejected" value="1"></td><td class="text-center"><input type="radio" name="p${i}_risk_ejected" value="0"></td><td class="text-center"><input type="radio" name="p${i}_risk_ejected" value="9" checked></td></tr>
+                                        <tr><td>หลับขณะเกิดเหตุ</td><td class="text-center"><input type="radio" name="p${i}_risk_sleep" value="1"></td><td class="text-center"><input type="radio" name="p${i}_risk_sleep" value="0"></td><td class="text-center"><input type="radio" name="p${i}_risk_sleep" value="9" checked></td></tr>
+                                        <tr><td>นั่งท้ายกระบะ</td><td class="text-center"><input type="radio" name="p${i}_risk_pickup_bed" value="1"></td><td class="text-center"><input type="radio" name="p${i}_risk_pickup_bed" value="0"></td><td class="text-center"><input type="radio" name="p${i}_risk_pickup_bed" value="9" checked></td></tr>
+                                        <tr><td>นั่งแค็บ</td><td class="text-center"><input type="radio" name="p${i}_risk_pickup_cab" value="1"></td><td class="text-center"><input type="radio" name="p${i}_risk_pickup_cab" value="0"></td><td class="text-center"><input type="radio" name="p${i}_risk_pickup_cab" value="9" checked></td></tr>
+                                        <tr><td>อุปกรณ์ไม่ปลอดภัย</td><td class="text-center"><input type="radio" name="p${i}_risk_unsafe" value="1"></td><td class="text-center"><input type="radio" name="p${i}_risk_unsafe" value="0"></td><td class="text-center"><input type="radio" name="p${i}_risk_unsafe" value="9" checked></td></tr>
+                                        <tr><td>ไม่ใช้ทางข้าม (คนเดินเท้า)</td><td class="text-center"><input type="radio" name="p${i}_risk_no_crosswalk" value="1"></td><td class="text-center"><input type="radio" name="p${i}_risk_no_crosswalk" value="0"></td><td class="text-center"><input type="radio" name="p${i}_risk_no_crosswalk" value="9" checked></td></tr>
+                                    </tbody>
+                                </table>
+                             </div>
+                        </div>
+                        <div class="col-12"><textarea class="form-control form-control-sm" name="p${i}_injury" rows="1" placeholder="รายละเอียดบาดแผล..."></textarea></div>
+                    </div>
+                </div>`;
+            }
+            ul.innerHTML = htmlTabs; content.innerHTML = htmlContent;
+        }
+
+        // --- Counterparty Tabs ---
+        function generatePartyTabs() {
+            const ul = document.getElementById('partyTabs');
+            const content = document.getElementById('partyTabsContent');
+            let htmlTabs = '', htmlContent = '';
+            for(let i=1; i<=5; i++) {
+                htmlTabs += `<li class="nav-item"><button class="nav-link ${i===1?'active':''}" data-bs-toggle="tab" data-bs-target="#party${i}" type="button">คู่กรณี ${i}</button></li>`;
+                htmlContent += `
+                <div class="tab-pane fade ${i===1?'show active':''}" id="party${i}">
+                    <div class="row g-2">
+                        <div class="col-md-4"><label class="small">ชื่อ-นามสกุล</label><input type="text" class="form-control form-control-sm" name="party${i}_name"></div>
+                        <div class="col-md-3"><label class="small">อายุ</label><input type="number" class="form-control form-control-sm" name="party${i}_age"></div>
+                        <div class="col-md-3"><label class="small">เพศ</label><select class="form-select form-select-sm" name="party${i}_gender"><option value="">-</option><option value="ชาย">ชาย</option><option value="หญิง">หญิง</option></select></div>
+                        <div class="col-md-4"><label class="small">ยานพาหนะ</label><input type="text" class="form-control form-control-sm" name="party${i}_vehicle"></div>
+                        <div class="col-md-4"><label class="small">สถานะบาดเจ็บ</label><select class="form-select form-select-sm" name="party${i}_injury"><option value="ไม่เจ็บ">ไม่เจ็บ</option><option value="บาดเจ็บ">บาดเจ็บ</option><option value="เสียชีวิต">เสียชีวิต</option></select></div>
+                        <div class="col-md-4"><label class="small">ดื่มแอลกอฮอล์</label><select class="form-select form-select-sm" name="party${i}_alc"><option value="ไม่ดื่ม">ไม่ดื่ม</option><option value="ดื่ม">ดื่ม</option><option value="ไม่ทราบ">ไม่ทราบ</option></select></div>
+                        <div class="col-12"><textarea class="form-control form-control-sm" name="party${i}_detail" rows="1" placeholder="รายละเอียดเพิ่มเติม..."></textarea></div>
+                    </div>
+                </div>`;
+            }
+            ul.innerHTML = htmlTabs; content.innerHTML = htmlContent;
+        }
+
+        function loadMap() {
+            if(typeof google === 'undefined') {
+                 const s = document.createElement('script');
+                 s.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAP_KEY}&callback=initMap`;
+                 document.body.appendChild(s);
+            } else initMap();
+        }
+        function initMap() {
+            const center = { lat: 16.05, lng: 103.95 };
+            formMap = new google.maps.Map(document.getElementById('mapForm'), { zoom: 12, center: center, mapTypeId: 'hybrid' });
+            formMap.addListener("click", e => {
+                if(formMarker) formMarker.setMap(null);
+                formMarker = new google.maps.Marker({ position: e.latLng, map: formMap });
+                document.getElementById('latInput').value = e.latLng.lat().toFixed(6);
+                document.getElementById('lngInput').value = e.latLng.lng().toFixed(6);
+            });
+        }
+
+        function setForm(data) {
+            const form = document.getElementById('investigationForm');
+            Object.keys(data).forEach(k => {
+                const el = form.elements[k];
+                if(el) {
+                    if(el.type === 'checkbox') el.checked = (data[k] == 1 || data[k] == 'true');
+                    else if(el instanceof RadioNodeList) el.value = data[k];
+                    else el.value = data[k];
+                }
+            });
+            // Trigger calculation
+            calculateOutcomes();
+        }
+
+function populateFromLocal() {
+    const data = JSON.parse(localStorage.getItem('rti_prefill_data'));
+    if (!data) return;
+
+    // === STEP A: ถ้ามีข้อมูลจาก Patients Sheet ให้ Set ลงฟอร์มก่อน (เป็น Base) ===
+    if (data._patients_data) {
+        const pData = data._patients_data;
+        // Set ทุกฟิลด์ที่ตรงกับ Form field name โดยตรง
+        const form = document.getElementById('investigationForm');
+        Object.keys(pData).forEach(key => {
+            if (key === 'id' || key === 'timestamp' || key === 'reporter_username') return;
+            const el = form.elements[key];
+            if (el) {
+                if (el.type === 'checkbox') {
+                    el.checked = (pData[key] == 1 || pData[key] == 'true' || pData[key] === true);
+                } else if (el instanceof RadioNodeList) {
+                    el.value = pData[key];
+                } else {
+                    el.value = pData[key];
+                }
+            }
+        });
+    }
+
+    // === STEP B: Set/Override ด้วยข้อมูลจาก CSV (มีความสำคัญสูงกว่า) ===
+    const formMap = {
+        // ข้อมูลหลัก
+        'report_name': data.report_name,
+        'accident_date': data.accident_date,
+        'accident_time': data.accident_time,
+        'incident_type_main': data.incident_type_main,
+
+        // สถานที่เกิดเหตุ
+        'accident_place': data.accident_place,
+        'incident_address_detail': data.incident_address_detail,
+        'accident_subdistrict': data.accident_subdistrict,
+        'accident_district': data.accident_district,
+        'accident_province': data.accident_province,
+        'accident_country': data.accident_country,
+
+        // ผู้ขับขี่
+        'driver_name': data.driver_name,
+        'driver_cid': data.driver_cid,
+        'driver_age': data.driver_age,
+        'driver_gender': data.driver_gender,
+        'driver_job': data.driver_job,
+        'driver_disease': data.driver_disease,
+        'driver_transport_by': data.driver_transport_by,
+        'driver_status': data.driver_status,
+
+        // อุปกรณ์ป้องกัน
+        'driver_helmet_usage': data.driver_helmet_usage,
+        'driver_seatbelt_usage': data.driver_seatbelt_usage,
+
+        // พฤติกรรมเสี่ยง
+        'risk_d_alc': data.risk_d_alc,
+        'risk_d_alc_detail': data.risk_d_alc_detail,
+
+        // ยานพาหนะ
+        'vehicle_type_detail': data.vehicle_type_detail,
+
+        // ถนน/สิ่งแวดล้อม
+        'road_type': data.road_type,
+        'traffic_surface': data.traffic_surface,
+
+        // ผลกระทบ
+        'total_dead': data.total_dead
+    };
+
+    setForm(formMap);
+
+    // === STEP C: ตั้งค่า Outcomes ===
+    if (data.total_dead === '1') {
+        const deadScene = document.querySelector('[name="dead_scene"]');
+        if (deadScene && !deadScene.value) deadScene.value = 1;
+    }
+    calculateOutcomes();
+
+    // === STEP D: ตั้งค่าผู้บันทึก ===
+    if (currentUser) {
+        const recName = document.querySelector('[name="recorder_name"]');
+        const recOrg = document.querySelector('[name="recorder_org"]');
+        if (recName && !recName.value) recName.value = currentUser.name;
+        if (recOrg && !recOrg.value) recOrg.value = currentUser.hospital_code;
+    }
+
+    Swal.fire({
+        icon: 'success',
+        title: 'ดึงข้อมูลสำเร็จ',
+        html: '<div class="text-start small">' +
+              '<p class="mb-1"><strong>ชื่อ:</strong> ' + (data.driver_name || '-') + '</p>' +
+              '<p class="mb-1"><strong>วันที่เกิดเหตุ:</strong> ' + (data.accident_date || '-') + '</p>' +
+              '<p class="mb-1"><strong>ตำบล:</strong> ' + (data.accident_subdistrict || '-') + '</p>' +
+              '<p class="mb-1"><strong>ยานพาหนะ:</strong> ' + (data.vehicle_type_detail || '-') + '</p>' +
+              (data._patients_data ? '<p class="text-success mb-0"><i class="fas fa-check-circle"></i> พบข้อมูลจาก Patients Sheet — โหลดแล้ว</p>' : '<p class="text-info mb-0">ใช้ข้อมูลจาก Data Center เท่านั้น</p>') +
+              '</div>',
+        timer: 3000,
+        timerProgressBar: true
+    });
+}
+        async function loadReport(id) {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            try {
+                const res = await fetch(`${API_URL_READ}?action=getReportData`);
+                const json = await res.json();
+                const report = json.data.find(r => r.id == id);
+                if(report) {
+                    setForm(report);
+                    document.getElementById('reportId').value = report.id;
+                    if(report.lat) {
+                        const pos = { lat: parseFloat(report.lat), lng: parseFloat(report.lng) };
+                        if(formMap) {
+                            formMap.setCenter(pos);
+                            new google.maps.Marker({ position: pos, map: formMap });
+                        }
+                    }
+                    if(report.gallery_descriptions) {
+                        const descs = report.gallery_descriptions.split('|');
+                        descs.forEach((d, i) => {
+                            const input = document.querySelector(`[name="img_desc_${i+1}"]`);
+                            if(input) input.value = d;
+                        });
+                    }
+                    // Calc outcomes again after loading
+                    calculateOutcomes();
+                }
+            } catch(e) { console.error(e); }
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const r = new FileReader();
+            r.readAsDataURL(file);
+            r.onload = () => resolve({ name: file.name, data: r.result });
+            r.onerror = error => reject(error);
+        });
+
+        // =====================================================
+        // ===== SEARCH VICTIMS FUNCTIONS =====
+        // =====================================================
+
+        async function openSearchModal() {
+            new bootstrap.Modal(document.getElementById('searchVictimsModal')).show();
+            if (!searchDataLoaded) await loadSearchData();
+        }
+
+        async function loadSearchData() {
+            document.getElementById('searchLoading').style.display = 'block';
+            document.getElementById('searchTableBody').innerHTML = '';
+            searchDataLoaded = false;
+
+            try {
+                const [csvResult, rtiResult] = await Promise.all([
+                    new Promise(resolve => {
+                        Papa.parse(CSV_URL, {
+                            download: true, header: true, skipEmptyLines: true,
+                            complete: r => resolve(r.data),
+                            error: () => resolve([])
+                        });
+                    }),
+                    fetch(`${API_URL_READ}?action=getReportData`).then(r => r.json()).catch(() => ({ status: 'error', data: [] }))
+                ]);
+
+                // เฉพาะแถวที่มีข้อมูลผู้เสียชีวิต
+                allCsvDeadData = csvResult.filter(r =>
+                    (r.dead_date && String(r.dead_date).trim() !== '') ||
+                    (r.dead && String(r.dead) !== '' && String(r.dead) !== '0')
+                );
+
+                if (rtiResult.status === 'success') allRtiReports = rtiResult.data;
+
+                buildSearchRows();
+                filterSearchTable();
+                searchDataLoaded = true;
+            } catch (e) {
+                console.error(e);
+                document.getElementById('searchTableBody').innerHTML =
+                    '<tr><td colspan="8" class="text-center text-danger py-4"><i class="fas fa-exclamation-triangle me-2"></i>โหลดข้อมูลไม่สำเร็จ กรุณากดปุ่มโหลดใหม่</td></tr>';
+            }
+            document.getElementById('searchLoading').style.display = 'none';
+        }
+
+        function buildSearchRows() {
+            // สร้าง map ของรายงาน RTI ที่มีอยู่แล้ว เพื่อ cross-reference สถานะ
+            const reportMap = new Map();
+            allRtiReports.forEach(r => {
+                const d  = r.accident_date ? r.accident_date.split('T')[0] : '';
+                const n1 = (r.driver_name  || '').trim();
+                const n2 = (r.victim_name  || '').trim();
+                if (d && n1) reportMap.set(`${d}|${n1}`, r);
+                if (d && n2) reportMap.set(`${d}|${n2}`, r);
+            });
+
+            searchAllRows = allCsvDeadData.map((r, index) => {
+                const dateStr = r.acc_date ? r.acc_date.split(' ')[0] : '';
+                const name    = ((r.fname || '') + ' ' + (r.lname || '')).trim();
+                const matched = reportMap.get(`${dateStr}|${name}`);
+                return {
+                    index, dateStr, name,
+                    sex:        r.sex == '1' ? 'ชาย' : (r.sex == '2' ? 'หญิง' : '-'),
+                    age:        r.age_year || '-',
+                    occupation: r.occupation_text || '-',
+                    vehicle:    r.vehicle1_text   || '-',
+                    tambol:     r.acc_tambol_text  || '-',
+                    isDone:     !!matched,
+                    reportId:   matched ? matched.id : null,
+                    csvData:    r,
+                    rtiData:    matched || null
+                };
+            });
+        }
+
+        function filterSearchTable() {
+            const startDate   = document.getElementById('searchStartDate').value;
+            const endDate     = document.getElementById('searchEndDate').value;
+            const nameFilter  = (document.getElementById('searchName').value || '').toLowerCase().trim();
+            const statusFilter= document.getElementById('searchStatus').value;
+
+            const filtered = searchAllRows.filter(row => {
+                if (startDate && row.dateStr && new Date(row.dateStr) < new Date(startDate)) return false;
+                if (endDate   && row.dateStr && new Date(row.dateStr) > new Date(endDate))   return false;
+                if (nameFilter && !row.name.toLowerCase().includes(nameFilter)) return false;
+                if (statusFilter === 'done'    && !row.isDone)  return false;
+                if (statusFilter === 'pending' &&  row.isDone)  return false;
+                return true;
+            });
+
+            const doneCount    = filtered.filter(r => r.isDone).length;
+            const pendingCount = filtered.length - doneCount;
+            document.getElementById('searchCount').innerHTML =
+                `พบ <strong>${filtered.length}</strong> ราย &nbsp;|&nbsp; ` +
+                `<span class="text-success fw-bold">${doneCount} สอบสวนแล้ว</span> &nbsp;|&nbsp; ` +
+                `<span class="text-danger fw-bold">${pendingCount} ยังไม่สอบสวน</span>`;
+
+            const tbody = document.getElementById('searchTableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">ไม่พบข้อมูล</td></tr>';
+                return;
+            }
+
+            const fmtDate = ds => {
+                if (!ds) return '-';
+                const d = new Date(ds);
+                return isNaN(d.getTime()) ? ds : `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()+543}`;
+            };
+
+            tbody.innerHTML = filtered.map(row => {
+                const badge = row.isDone
+                    ? `<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>สอบสวนแล้ว</span>`
+                    : `<span class="badge bg-danger"><i class="fas fa-clock me-1"></i>ยังไม่สอบสวน</span>`;
+                const btn = row.isDone
+                    ? `<button class="btn btn-sm btn-primary py-0 px-2" onclick="selectVictimSearch(${row.index})"><i class="fas fa-edit me-1"></i>แก้ไข</button>`
+                    : `<button class="btn btn-sm btn-danger py-0 px-2" onclick="selectVictimSearch(${row.index})"><i class="fas fa-file-medical me-1"></i>สอบสวน</button>`;
+                return `<tr class="${row.isDone ? 'table-success' : ''}">
+                    <td class="small text-nowrap">${fmtDate(row.dateStr)}</td>
+                    <td class="fw-bold">${row.name || '-'}</td>
+                    <td class="text-center small">${row.sex} / ${row.age} ปี</td>
+                    <td class="small">${row.occupation}</td>
+                    <td class="small">${row.vehicle}</td>
+                    <td class="small">${row.tambol}</td>
+                    <td>${badge}</td>
+                    <td class="text-center">${btn}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function resetSearch() {
+            document.getElementById('searchStartDate').value = '';
+            document.getElementById('searchEndDate').value   = '';
+            document.getElementById('searchName').value      = '';
+            document.getElementById('searchStatus').value    = '';
+            filterSearchTable();
+        }
+
+        function selectVictimSearch(index) {
+            const row = searchAllRows[index];
+            if (!row) return;
+
+            const mapped = getMappedDataForm(row.csvData);
+            if (row.rtiData) mapped._patients_data = row.rtiData;
+            localStorage.setItem('rti_prefill_data', JSON.stringify(mapped));
+
+            // ปิด modal
+            const modalEl = document.getElementById('searchVictimsModal');
+            const modalInst = bootstrap.Modal.getInstance(modalEl);
+            if (modalInst) modalInst.hide();
+
+            if (row.reportId) {
+                // โหลดรายงานที่มีอยู่แล้วเพื่อแก้ไข
+                document.getElementById('reportId').value = row.reportId;
+                loadReport(row.reportId);
+            } else {
+                // เคสใหม่ — pre-fill จาก CSV
+                setTimeout(() => populateFromLocal(), 300);
+            }
+        }
+
+        function getMappedDataForm(r) {
+            const name   = ((r.fname || '') + ' ' + (r.lname || '')).trim();
+            const isDead = (r.dead_date && String(r.dead_date).trim() !== '') ||
+                           (r.dead && String(r.dead) !== '' && String(r.dead) !== '0');
+            const alcVal = (() => {
+                const t = r.alcohol_text || '';
+                if (t.includes('ดื่ม') || t.includes('ใช้') || t.includes('มีกลิ่น')) return '1';
+                if (t.includes('ไม่')) return '0';
+                return '9';
+            })();
+            const helmetVal = (() => {
+                const s = r.safty_text || '';
+                if (s.includes('สวม') || s.includes('ใช้')) return '1';
+                if (s.includes('ไม่สวม') || s.includes('ไม่ใช้')) return '3';
+                return '4';
+            })();
+            const seatbeltVal = (() => {
+                const s = r.safty_text || '';
+                if (s.includes('เข็มขัด') && (s.includes('ใช้') || s.includes('รัด'))) return '1';
+                if (s.includes('เข็มขัด') && s.includes('ไม่')) return '2';
+                return '3';
+            })();
+            return {
+                report_name:              `อุบัติเหตุ ${name}`,
+                accident_date:            r.acc_date ? r.acc_date.split(' ')[0] : '',
+                accident_time:            r.acc_time || '',
+                incident_type_main:       (r.vehicle2_text && r.vehicle2_text.trim() && r.vehicle2_text.trim() !== '-' && !r.vehicle2_text.includes('ไม่มี')) ? '1' : '2',
+                accident_place:           r.acc_text   || r.road_area || '',
+                incident_address_detail:  r.road_area  || '',
+                accident_subdistrict:     r.acc_tambol_text || '',
+                accident_district:        r.acc_ampur_text  || 'เสลภูมิ',
+                accident_province:        r.acc_prov_text   || 'ร้อยเอ็ด',
+                accident_country:         'ไทย',
+                // ผู้ขับขี่
+                driver_name:              name,
+                driver_cid:               r.cid || r.pid || '',
+                driver_age:               r.age_year || '',
+                driver_gender:            r.sex == '1' ? 'ชาย' : (r.sex == '2' ? 'หญิง' : ''),
+                driver_job:               r.occupation_text || '',
+                driver_disease:           r.disease_text || r.underlying || '',
+                driver_transport_by:      r.carry_text  || '',
+                driver_status:            isDead ? 'เสียชีวิต' : 'บาดเจ็บ',
+                // ผลกระทบ
+                dead_scene:               isDead ? '1' : '0',
+                dead_transit:             '0',
+                dead_er:                  '0',
+                dead_ward:                '0',
+                dead_refer_out:           '0',
+                injure_no_hospital:       '0',
+                injure_opd:               '0',
+                injure_ipd:               '0',
+                // พฤติกรรมเสี่ยง
+                risk_d_alc:               alcVal,
+                risk_d_alc_detail:        r.alcohol_text || '',
+                driver_helmet_usage:      helmetVal,
+                driver_seatbelt_usage:    seatbeltVal,
+                // ยานพาหนะ
+                vehicle_type_detail:      r.vehicle1_text || '',
+                // ถนน
+                road_type:                r.road_type    || '',
+                traffic_surface:          r.road_surface || '',
+                // ผู้บันทึก
+                recorder_name:            currentUser ? currentUser.name          : '',
+                recorder_org:             currentUser ? currentUser.hospital_code : ''
+            };
+        }
+
+        // =====================================================
+        // ===== END SEARCH VICTIMS FUNCTIONS =====
+        // =====================================================
+
+        // =====================================================
+        // ===== PRINT REPORT FUNCTION =====
+        // =====================================================
+        function printReport() {
+            const form = document.getElementById('investigationForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            // Add checkboxes (FormData only gives checked ones; include all)
+            form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                data[cb.name] = cb.checked ? 1 : 0;
+            });
+
+            // Add current report ID if editing
+            const reportIdEl = document.getElementById('reportId');
+            if (reportIdEl && reportIdEl.value) data.id = reportIdEl.value;
+
+            // Pull existing gallery_urls from the form (set during loadReport/setForm)
+            const galleryUrlsEl = document.querySelector('[name="gallery_urls"]');
+            if (galleryUrlsEl) data.gallery_urls = galleryUrlsEl.value;
+
+            localStorage.setItem('rti_print_data', JSON.stringify(data));
+            window.open('Print.html', '_blank');
+        }
+
+        document.getElementById('investigationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Process Images
+            let imgs = [];
+            let descs = [];
+            for(let i=1; i<=10; i++) {
+                const f = document.querySelector(`[name="img_file_${i}"]`);
+                const d = document.querySelector(`[name="img_desc_${i}"]`);
+                if(f && f.files[0]) imgs.push(await toBase64(f.files[0]));
+                if(d) descs.push(d.value.replace(/\|/g, '-') || "");
+            }
+            data.upload_images = imgs;
+            data.gallery_descriptions = descs.join('|');
+
+            // Handle Checkboxes
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => { data[cb.name] = cb.checked ? 1 : 0; });
+
+            try {
+                const res = await fetch(API_URL_SAVE, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'saveReport', username: currentUser.username, data: data })
+                });
+                const result = await res.json();
+                if(result.status === 'success') {
+                    Swal.fire('บันทึกสำเร็จ', '', 'success').then(() => window.location.href = 'RTI_Dashboard.html');
+                } else Swal.fire('Error', result.message, 'error');
+            } catch(e) { Swal.fire('Error', 'Connection failed', 'error'); }
+            
+            document.getElementById('loadingOverlay').style.display = 'none';
+        });
+
+        // =====================================================
+        // AI ASSIST FUNCTIONS  (Gemini API)
+        // =====================================================
+        const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+        const GEMINI_MODELS = [
+            { id:'gemini-2.5-flash',      label:'Gemini 2.5 Flash ⚡ (แนะนำ)' },
+            { id:'gemini-2.5-flash-lite', label:'Gemini 2.5 Flash Lite 🪶 (ประหยัดที่สุด)' },
+            { id:'gemini-2.5-pro',        label:'Gemini 2.5 Pro 🔬 (แม่นยำสูงสุด)' },
+            { id:'gemini-3-flash',        label:'Gemini 3 Flash ⚡' },
+            { id:'gemini-3-flash-preview',label:'Gemini 3 Flash Preview 🔭' },
+            { id:'gemini-3-pro',          label:'Gemini 3 Pro 🔬' },
+            { id:'gemini-1.5-flash',      label:'Gemini 1.5 Flash' },
+            { id:'gemini-1.5-pro',        label:'Gemini 1.5 Pro' },
+        ];
+        let _aiMode = 'haddon';
+
+        function _ensureModelSelect() {
+            const sel = document.getElementById('aiModelSelect');
+            if (!sel || sel.options.length > 0) return;
+            GEMINI_MODELS.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id; opt.textContent = m.label;
+                sel.appendChild(opt);
+            });
+            sel.value = localStorage.getItem('rti_gemini_model') || 'gemini-2.5-flash';
+        }
+
+        function _updateModelLabel() {
+            const model = localStorage.getItem('rti_gemini_model') || 'gemini-2.5-flash';
+            const found = GEMINI_MODELS.find(m => m.id === model);
+            const el = document.getElementById('aiCurrentModel');
+            if (el) el.textContent = found ? found.label.replace(/ \(.*\)/, '') : model;
+        }
+
+        function openAIModal(mode) {
+            _aiMode = mode;
+            _ensureModelSelect();
+            ['aiKeySetup','aiLoading','aiError','aiHaddonDraft','aiSummaryDraft'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            document.getElementById('aiApplyBtn').style.display = 'none';
+            _updateModelLabel();
+            new bootstrap.Modal(document.getElementById('aiDraftModal')).show();
+            const key = localStorage.getItem('rti_gemini_key');
+            if (!key) {
+                document.getElementById('aiKeySetup').style.display = 'block';
+            } else {
+                _startAICall();
+            }
+        }
+
+        function saveAIKey() {
+            const v = document.getElementById('aiApiKeyInput').value.trim();
+            if (!v) return Swal.fire('', 'กรุณากรอก API Key', 'warning');
+            const model = document.getElementById('aiModelSelect').value;
+            localStorage.setItem('rti_gemini_key', v);
+            localStorage.setItem('rti_gemini_model', model);
+            _updateModelLabel();
+            document.getElementById('aiKeySetup').style.display = 'none';
+            _startAICall();
+        }
+
+        async function testAIKey() {
+            const v = document.getElementById('aiApiKeyInput').value.trim();
+            if (!v) return Swal.fire('', 'กรุณากรอก API Key ก่อนทดสอบ', 'warning');
+            const model = document.getElementById('aiModelSelect').value;
+            const btn = document.getElementById('aiTestBtn');
+            const result = document.getElementById('aiTestResult');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>กำลังทดสอบ...';
+            result.style.display = 'none';
+            try {
+                const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${v}`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: 'ตอบว่า OK เท่านั้น ห้ามมีข้อความอื่น' }] }], generationConfig: { maxOutputTokens: 10 } })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    const msg = data.error?.message || `HTTP ${res.status}`;
+                    result.className = 'alert alert-danger py-2 mt-2';
+                    result.innerHTML = `<i class="fas fa-times-circle me-1"></i><strong>ล้มเหลว:</strong> ${msg}`;
+                } else {
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '(ได้รับข้อมูล)';
+                    result.className = 'alert alert-success py-2 mt-2';
+                    result.innerHTML = `<i class="fas fa-check-circle me-1"></i><strong>ใช้งานได้!</strong> โมเดล <code>${model}</code> ตอบกลับ: <em>${text.trim()}</em>`;
+                }
+            } catch(e) {
+                result.className = 'alert alert-danger py-2 mt-2';
+                result.innerHTML = `<i class="fas fa-times-circle me-1"></i><strong>ข้อผิดพลาด:</strong> ${e.message}`;
+            }
+            result.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-flask me-1"></i>ทดสอบ';
+        }
+
+        function clearAIKey() {
+            localStorage.removeItem('rti_gemini_key');
+            localStorage.removeItem('rti_gemini_model');
+            document.getElementById('aiApiKeyInput').value = '';
+            _updateModelLabel();
+            Swal.fire({ icon:'success', title:'ลบ API Key แล้ว', timer:1500, showConfirmButton:false });
+        }
+
+        function changeAISettings() {
+            _ensureModelSelect();
+            document.getElementById('aiKeySetup').style.display = 'block';
+            ['aiHaddonDraft','aiSummaryDraft','aiError','aiLoading'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            document.getElementById('aiApplyBtn').style.display = 'none';
+            const key = localStorage.getItem('rti_gemini_key');
+            if (key) document.getElementById('aiApiKeyInput').value = key;
+            document.getElementById('aiModelSelect').value = localStorage.getItem('rti_gemini_model') || 'gemini-2.5-flash';
+        }
+
+        function _collectContext() {
+            const form = document.getElementById('investigationForm');
+            const fd = new FormData(form);
+            const d = Object.fromEntries(fd.entries());
+            form.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => { d[cb.name] = cb.value; });
+
+            const L = [], add = (lbl, val) => { if (val && String(val).trim() && String(val).trim() !== '0') L.push(`- ${lbl}: ${val}`); };
+            const HELMET = {'1':'สวมรัดคาง','2':'สวมไม่รัดคาง','3':'ไม่สวม','4':'ไม่ทราบ'};
+            const BELT   = {'1':'ใช้','2':'ไม่ใช้','3':'ไม่ทราบ'};
+            const ROAD_C = {'1':'ทางตรง','2':'ทางโค้ง','3':'ทางแยก','4':'ทางม้าลาย','6':'จุดกลับรถ'};
+            const WEATHER= {'1':'มีแสงสว่าง','2':'มืด','3':'ฝนตก','4':'หมอก'};
+
+            L.push('[เหตุการณ์]');
+            add('ชื่อรายงาน', d.report_name || d.event_name);
+            add('วันที่เกิดเหตุ', d.accident_date);
+            add('เวลาเกิดเหตุ', d.accident_time);
+            add('วันรับแจ้ง', d.notification_date);
+            add('เวลารับแจ้ง', d.notification_time);
+            add('เวลาถึงจุดเกิดเหตุ', d.first_scene_arrival_time);
+            add('ประเภทเหตุการณ์', d.incident_type_main);
+            add('ลักษณะการชน', d.collision_type);
+            add('สถานที่เกิดเหตุ', d.accident_place || d.incident_address_detail);
+            add('ถนน/เส้นทาง', [d.road_type, d.road_number].filter(Boolean).join(' '));
+            add('ตำบล/อำเภอ/จังหวัด', [d.accident_subdistrict, d.accident_district, d.accident_province].filter(Boolean).join(' '));
+            add('ผู้แจ้งเหตุ', d.notifier_name);
+            add('หน่วยงานรับแจ้ง', d.receiving_org);
+            add('โรงพยาบาล', d.hospital_name || d.receiving_hospital);
+            add('วิธีนำส่ง', d.transport_method || d.driver_transport_by);
+            add('ผู้เสียชีวิต', d.total_dead);
+            add('ผู้บาดเจ็บ', d.total_injured);
+            L.push('[ผู้ขับขี่]');
+            add('ชื่อ', d.driver_name); add('อายุ', d.driver_age ? d.driver_age+' ปี' : ''); add('เพศ', d.driver_gender);
+            add('อาชีพ', d.driver_job); add('ใบขับขี่', d.driver_license);
+            add('ประสบการณ์ขับขี่', d.driving_experience ? d.driving_experience+' ปี' : '');
+            add('ทักษะการขับขี่', d.driving_skill); add('สถานะบาดเจ็บ', d.driver_status);
+            add('หมวกนิรภัย', HELMET[d.driver_helmet_usage]);
+            add('เข็มขัดนิรภัย', BELT[d.driver_seatbelt_usage]);
+            add('แอลกอฮอล์', d.risk_d_alc=='1' ? 'ดื่ม'+(d.risk_d_alc_detail?' ('+d.risk_d_alc_detail+')':'') : d.risk_d_alc=='0' ? 'ไม่ดื่ม' : '');
+            add('ความเร็วประมาณ', d.speed_estimate || (d.speed_avg ? d.speed_avg+' กม./ชม.' : ''));
+            add('วัตถุประสงค์เดินทาง', d.driver_travel_purpose);
+            add('โรคประจำตัว', d.driver_disease);
+            const risks = [];
+            if (d.risk_d_speed=='1') risks.push('ขับเร็วเกินกำหนด');
+            if (d.risk_d_sleep=='1') risks.push('ง่วงนอน');
+            if (d.risk_d_phone=='1') risks.push('ใช้โทรศัพท์ขณะขับ');
+            if (d.risk_d_violation=='1') risks.push('ฝ่าฝืนสัญญาณไฟ');
+            if (d.risk_d_overtake=='1') risks.push('แซงผิดกฎหมาย');
+            if (d.risk_d_u_turn=='1') risks.push('กลับรถในที่ห้าม');
+            if (risks.length) add('พฤติกรรมเสี่ยง', risks.join(', '));
+            L.push('[ยานพาหนะ]');
+            add('ประเภท', d.vehicle_type_detail); add('ยี่ห้อ/รุ่น', [d.vehicle_brand, d.vehicle_model].filter(Boolean).join(' '));
+            add('ความจุ (cc)', d.vehicle_cc); add('ดัดแปลง', d.veh_modify);
+            add('สภาพยาง', {'1':'ปกติ','2':'ชำรุด','3':'หมดอายุ','4':'ลมอ่อน','6':'ไม่ทราบ'}[d.veh_tire_condition]);
+            add('สภาพเบรก', {'1':'ปกติ','2':'เบรกไม่อยู่','3':'ผ้าเบรกหมด','6':'ไม่ทราบ'}[d.veh_brake_condition]);
+            add('ระบบ ABS', {'1':'มี','2':'ไม่มี','3':'ไม่ทราบ'}[d.veh_abs]);
+            add('ประกันภัย', d.veh_insurance_class);
+            L.push('[ถนนและสิ่งแวดล้อม]');
+            add('ประเภทถนน', d.road_type); add('หมายเลขถนน', d.road_number);
+            add('จำนวนเลน', d.total_lanes); add('เขตชุมชน', d.road_community_zone);
+            add('ลักษณะทาง', ROAD_C[d.road_characteristics] || d.road_characteristics);
+            add('ผิวถนน', d.traffic_surface); add('สัญญาณไฟ', d.traffic_light);
+            add('แสงสว่าง/สภาพอากาศ', WEATHER[d.weather_visibility]);
+            add('สิ่งกีดขวาง/ส่งเสริมความรุนแรง', d.promoting_factor);
+            add('หมายเหตุสิ่งแวดล้อม', d.road_env_remark);
+            if (d.incident_notify_detail) { L.push('[เรื่องราวเหตุการณ์]'); L.push(d.incident_notify_detail); }
+            if (d.motorcycle_rider_info) add('ข้อมูลผู้ขับขี่จักรยานยนต์', d.motorcycle_rider_info);
+            if (d.car_driver_info) add('ข้อมูลผู้ขับขี่คู่กรณี', d.car_driver_info);
+            return L.join('\n');
+        }
+
+        function _buildHaddonPrompt(ctx) {
+            return `คุณเป็นผู้เชี่ยวชาญการสอบสวนอุบัติเหตุทางถนน (RTI) สังกัดกระทรวงสาธารณสุขไทย
+กรุณาวิเคราะห์ข้อมูลอุบัติเหตุต่อไปนี้และร่าง Haddon's Matrix ให้ครบถ้วน
+
+==ข้อมูลอุบัติเหตุ==
+${ctx}
+
+Haddon's Matrix:
+- ก่อนชน: ปัจจัยที่ทำให้เกิดอุบัติเหตุ
+- ขณะชน: ปัจจัยที่กำหนดความรุนแรงของการบาดเจ็บ
+- หลังชน: ปัจจัยที่ส่งผลต่อผลลัพธ์หลังเกิดเหตุ
+
+ตอบเป็น JSON เท่านั้น ไม่มีข้อความอื่นนอก JSON:
+{"haddon_human_pre":"...","haddon_human_crash":"...","haddon_human_post":"...","haddon_vehicle_pre":"...","haddon_vehicle_crash":"...","haddon_vehicle_post":"...","haddon_env_pre":"...","haddon_env_crash":"...","haddon_env_post":"..."}`;
+        }
+
+        function _buildSummaryPrompt(ctx) {
+            return `คุณเป็นผู้เชี่ยวชาญการสอบสวนอุบัติเหตุทางถนน (RTI) สังกัดกระทรวงสาธารณสุขไทย
+กรุณาวิเคราะห์ข้อมูลและร่างสรุปผลการสอบสวน
+
+==ข้อมูลอุบัติเหตุ==
+${ctx}
+
+ตอบเป็น JSON เท่านั้น ไม่มีข้อความอื่นนอก JSON:
+{"summary_factors":"สรุปปัจจัยสำคัญด้านคน ยานพาหนะ สิ่งแวดล้อม ที่นำไปสู่การเกิดเหตุและความรุนแรง","actions_taken":"สิ่งที่ทีมสอบสวนได้ดำเนินการไปแล้ว เช่น ลงพื้นที่ สัมภาษณ์ ประสานหน่วยงาน","suggestions":"ข้อเสนอแนะแนวทางป้องกัน แบ่งตามระดับบุคคล ชุมชน สิ่งแวดล้อม และนโยบาย"}`;
+        }
+
+        async function _startAICall() {
+            const key = localStorage.getItem('rti_gemini_key');
+            if (!key) { document.getElementById('aiKeySetup').style.display = 'block'; return; }
+            const model = localStorage.getItem('rti_gemini_model') || 'gemini-2.5-flash';
+            // sync model selector display
+            const sel = document.getElementById('aiModelSelect');
+            if (sel) sel.value = model;
+            document.getElementById('aiLoading').style.display = 'block';
+            document.getElementById('aiError').style.display = 'none';
+            const ctx = _collectContext();
+            const prompt = _aiMode === 'haddon' ? _buildHaddonPrompt(ctx) : _buildSummaryPrompt(ctx);
+            try {
+                const parsed = await _callGemini(key, model, prompt);
+                document.getElementById('aiLoading').style.display = 'none';
+                _renderDraft(parsed);
+            } catch(err) {
+                document.getElementById('aiLoading').style.display = 'none';
+                const el = document.getElementById('aiError');
+                el.style.display = 'block';
+                el.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i><strong>เกิดข้อผิดพลาด:</strong> ${err.message}
+                    <br><small class="d-block mt-1">ตรวจสอบ Gemini API Key หรือการเชื่อมต่ออินเทอร์เน็ต</small>
+                    <button class="btn btn-sm btn-outline-danger mt-2" onclick="changeAISettings()">เปลี่ยน API Key / โมเดล</button>`;
+            }
+        }
+
+        async function _callGemini(apiKey, model, prompt) {
+            const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${apiKey}`;
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { maxOutputTokens: 2048, temperature: 0.5 }
+                })
+            });
+            if (!res.ok) {
+                const e = await res.json().catch(() => ({}));
+                const msg = e.error?.message || `HTTP ${res.status}`;
+                throw new Error(msg.includes('API_KEY') ? 'API Key ไม่ถูกต้อง' : msg);
+            }
+            const data = await res.json();
+            const text = (data.candidates?.[0]?.content?.parts?.[0]?.text) || '';
+            const m = text.match(/\{[\s\S]*\}/);
+            if (!m) throw new Error('AI ไม่ส่ง JSON กลับมา กรุณาลองใหม่');
+            return JSON.parse(m[0]);
+        }
+
+        function _renderDraft(data) {
+            if (_aiMode === 'haddon') {
+                document.getElementById('aiHaddonDraft').style.display = 'block';
+                ['haddon_human_pre','haddon_human_crash','haddon_human_post',
+                 'haddon_vehicle_pre','haddon_vehicle_crash','haddon_vehicle_post',
+                 'haddon_env_pre','haddon_env_crash','haddon_env_post'].forEach(k => {
+                    const el = document.getElementById('ai_'+k);
+                    if (el && data[k]) el.value = data[k];
+                });
+            } else {
+                document.getElementById('aiSummaryDraft').style.display = 'block';
+                ['summary_factors','actions_taken','suggestions'].forEach(k => {
+                    const el = document.getElementById('ai_'+k);
+                    if (el && data[k]) el.value = data[k];
+                });
+            }
+            document.getElementById('aiApplyBtn').style.display = 'inline-block';
+        }
+
+        function applyAIDraft() {
+            const fields = _aiMode === 'haddon'
+                ? ['haddon_human_pre','haddon_human_crash','haddon_human_post',
+                   'haddon_vehicle_pre','haddon_vehicle_crash','haddon_vehicle_post',
+                   'haddon_env_pre','haddon_env_crash','haddon_env_post']
+                : ['summary_factors','actions_taken','suggestions'];
+            let applied = 0;
+            fields.forEach(k => {
+                const src = document.getElementById('ai_'+k);
+                const dst = document.querySelector(`[name="${k}"]`);
+                if (src && dst && src.value.trim()) { dst.value = src.value; applied++; }
+            });
+            bootstrap.Modal.getInstance(document.getElementById('aiDraftModal')).hide();
+            if (applied) Swal.fire({ icon:'success', title:`ใช้เนื้อหาแล้ว (${applied} ช่อง)`, text:'กรุณาตรวจสอบและแก้ไขเพิ่มเติมตามต้องการ', timer:2800, timerProgressBar:true, showConfirmButton:false });
+        }
+    </script>
+
+    <!-- AI Draft Modal -->
+    <div class="modal fade" id="aiDraftModal" tabindex="-1" aria-labelledby="aiModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header ai-modal-header text-white">
+                    <h5 class="modal-title" id="aiModalLabel">
+                        <i class="fas fa-robot me-2"></i>AI ช่วยร่างเนื้อหา — ตรวจสอบและแก้ไขก่อนนำใช้
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- API Key Setup -->
+                    <div id="aiKeySetup" style="display:none;" class="alert alert-info border-0">
+                        <label class="fw-bold mb-2"><i class="fas fa-key me-1"></i> ตั้งค่า Gemini API (เก็บในเครื่องคุณเท่านั้น ไม่ส่งออก)</label>
+                        <div class="row g-2">
+                            <div class="col-md-7">
+                                <label class="form-label small fw-semibold">API Key</label>
+                                <input type="password" class="form-control" id="aiApiKeyInput" placeholder="วาง API Key ที่นี่...">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label small fw-semibold">โมเดล</label>
+                                <select class="form-select" id="aiModelSelect"></select>
+                            </div>
+                        </div>
+                        <div id="aiTestResult" style="display:none;"></div>
+                        <div class="d-flex gap-2 mt-2 flex-wrap">
+                            <button class="btn btn-success btn-sm" type="button" onclick="saveAIKey()"><i class="fas fa-save me-1"></i>บันทึกและใช้งาน</button>
+                            <button class="btn btn-outline-primary btn-sm" type="button" id="aiTestBtn" onclick="testAIKey()"><i class="fas fa-flask me-1"></i>ทดสอบ</button>
+                            <button class="btn btn-outline-danger btn-sm" type="button" onclick="clearAIKey()"><i class="fas fa-trash me-1"></i>ลบ Key</button>
+                        </div>
+                        <small class="text-muted mt-2 d-block"><i class="fas fa-info-circle me-1"></i>รับ API Key ได้ที่ <strong>aistudio.google.com</strong> → Get API Key (ฟรี)</small>
+                    </div>
+                    <!-- Loading -->
+                    <div id="aiLoading" style="display:none;" class="text-center py-5">
+                        <div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div>
+                        <div class="mt-3 fw-bold fs-5 text-primary">AI กำลังวิเคราะห์ข้อมูล...</div>
+                        <small class="text-muted">อาจใช้เวลา 5–20 วินาที</small>
+                    </div>
+                    <!-- Error -->
+                    <div id="aiError" style="display:none;" class="alert alert-danger"></div>
+                    <!-- Haddon Draft -->
+                    <div id="aiHaddonDraft" style="display:none;">
+                        <p class="text-muted small mb-3"><i class="fas fa-info-circle me-1 text-info"></i>AI ร่างเนื้อหาให้แล้ว — แก้ไขในช่องได้เลย แล้วกด <strong>ใช้เนื้อหานี้</strong></p>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm align-middle">
+                                <thead class="table-light text-center">
+                                    <tr><th style="width:10%">ปัจจัย</th><th>ก่อนชน<br><small class="fw-normal text-muted">(Pre-Crash)</small></th><th>ขณะชน<br><small class="fw-normal text-muted">(Crash)</small></th><th>หลังชน<br><small class="fw-normal text-muted">(Post-Crash)</small></th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="ai-field-row">
+                                        <td class="bg-light fw-bold text-center">คน</td>
+                                        <td><textarea class="form-control form-control-sm" id="ai_haddon_human_pre" rows="4"></textarea></td>
+                                        <td><textarea class="form-control form-control-sm" id="ai_haddon_human_crash" rows="4"></textarea></td>
+                                        <td><textarea class="form-control form-control-sm" id="ai_haddon_human_post" rows="4"></textarea></td>
+                                    </tr>
+                                    <tr class="ai-field-row">
+                                        <td class="bg-light fw-bold text-center">รถ</td>
+                                        <td><textarea class="form-control form-control-sm" id="ai_haddon_vehicle_pre" rows="4"></textarea></td>
+                                        <td><textarea class="form-control form-control-sm" id="ai_haddon_vehicle_crash" rows="4"></textarea></td>
+                                        <td><textarea class="form-control form-control-sm" id="ai_haddon_vehicle_post" rows="4"></textarea></td>
+                                    </tr>
+                                    <tr class="ai-field-row">
+                                        <td class="bg-light fw-bold text-center">สิ่งแวดล้อม</td>
+                                        <td><textarea class="form-control form-control-sm" id="ai_haddon_env_pre" rows="4"></textarea></td>
+                                        <td><textarea class="form-control form-control-sm" id="ai_haddon_env_crash" rows="4"></textarea></td>
+                                        <td><textarea class="form-control form-control-sm" id="ai_haddon_env_post" rows="4"></textarea></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Summary Draft -->
+                    <div id="aiSummaryDraft" style="display:none;">
+                        <p class="text-muted small mb-3"><i class="fas fa-info-circle me-1 text-info"></i>AI ร่างเนื้อหาให้แล้ว — แก้ไขในช่องได้เลย แล้วกด <strong>ใช้เนื้อหานี้</strong></p>
+                        <div class="mb-3">
+                            <label class="fw-bold text-danger">สรุปปัจจัยที่นำไปสู่การเกิดเหตุ</label>
+                            <textarea class="form-control" id="ai_summary_factors" rows="5"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold text-success">สิ่งที่ได้ดำเนินการไปแล้ว</label>
+                            <textarea class="form-control" id="ai_actions_taken" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold text-primary">ข้อเสนอแนะ/แนวทางป้องกัน</label>
+                            <textarea class="form-control" id="ai_suggestions" rows="5"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <small class="text-muted me-auto">
+                        <i class="fas fa-shield-alt me-1"></i>Key เก็บใน localStorage เครื่องคุณเท่านั้น &nbsp;|&nbsp;
+                        <span id="aiCurrentModel" class="text-primary fw-semibold"></span>
+                        <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-secondary" onclick="changeAISettings()">
+                            <i class="fas fa-cog"></i> เปลี่ยน
+                        </button>
+                    </small>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-success px-4" id="aiApplyBtn" style="display:none;" onclick="applyAIDraft()">
+                        <i class="fas fa-check me-2"></i>ใช้เนื้อหานี้ในแบบฟอร์ม
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
